@@ -28,7 +28,8 @@ const Views = (() => {
       none: 'Todavía no encontramos cómo resolverlo con tu comunidad', noneText: 'Puede que la capacidad exista y aún no la conozcamos. Te avisamos en cuanto aparezca.',
       notify: 'Avísame cuando aparezca alguien', notified: 'Te avisaremos cuando aparezca alguien.',
       privacy: 'Solo compartimos tu nombre y edificio. Nunca tu número de departamento.',
-      coverage: (c, t) => `${c} de ${t} cubiertas`
+      coverage: (c, t) => `${c} de ${t} cubiertas`,
+      place: 'El lugar también ayuda', seeBuilding: 'Ver el edificio', seeSpace: 'Ver el espacio en 3D', placeCovers: 'Lo resuelve el lugar', placeHelps: 'Complementa'
     },
     en: {
       back: 'Home', your: 'Your situation', understood: 'What we understood', needs: 'You probably need',
@@ -43,7 +44,8 @@ const Views = (() => {
       none: "We couldn't find a way with your community yet", noneText: 'The capability may exist and we just don\'t know it yet. We\'ll let you know.',
       notify: 'Let me know when someone can', notified: 'We\'ll let you know when someone can.',
       privacy: 'Only your name and building are shared. Never your apartment number.',
-      coverage: (c, t) => `${c} of ${t} covered`
+      coverage: (c, t) => `${c} of ${t} covered`,
+      place: 'The place itself helps', seeBuilding: 'See the building', seeSpace: 'See the space in 3D', placeCovers: 'The place covers it', placeHelps: 'Complements'
     }
   };
 
@@ -234,16 +236,40 @@ const Views = (() => {
       <h3 class="section__sub">${esc(t.gaps)}</h3>
       <ul class="gaps">${sol.gaps.map(id => UI.gapItem(byId[id], s.understanding.lang)).join('')}</ul>` : '';
     const n = sol.people.length;
-    const cta = n === 1 ? t.askOne(State.person(sol.people[0]).name) : t.askMany(n);
+    const placeSteps = sol.placeSteps || [];
+    /* Place Capabilities: el lugar también ayuda (cubre lo que nadie cubrió o complementa a la persona). */
+    const places = placeSteps.length ? `
+      <h3 class="section__sub">${esc(t.place)}</h3>
+      <ul class="places">${placeSteps.map((p, i) => placeCard(p, byId[p.needId], s, t, i)).join('')}</ul>` : '';
+    const firstPlace = placeSteps.find(p => p.covers) || placeSteps[0];
+    const cta = n === 0
+      ? `<a class="btn btn--primary" href="#/twin?b=${esc(firstPlace ? firstPlace.placeId : '')}&s=${esc(s.id)}">${esc(t.seeSpace)}</a>`
+      : `<button class="btn btn--primary" type="button" data-action="ask" data-situation="${esc(s.id)}" data-strategy="${esc(sol.key)}">${esc(n === 1 ? t.askOne(State.person(sol.people[0]).name) : t.askMany(n))}</button>`;
     return `
       ${multi ? `<p class="solution__strategy"><strong>${esc(sol.label)}</strong> · <button class="linkish" type="button" data-action="choose-strategy" data-situation="${esc(s.id)}" data-strategy="">${esc(t.otherWays)}</button></p>` : ''}
       <ul class="steps">${steps}</ul>
       ${extras}
+      ${places}
       ${gaps}
       <div class="solution__cta">
-        <button class="btn btn--primary" type="button" data-action="ask" data-situation="${esc(s.id)}" data-strategy="${esc(sol.key)}">${esc(cta)}</button>
+        ${cta}
         <p class="muted small">${esc(t.privacy)}</p>
       </div>`;
+  }
+
+  function placeCard(p, needItem, s, t, i) {
+    const en = s.understanding.lang === 'en';
+    const label = needItem ? (en ? (needItem.labelEn || needItem.label) : needItem.label) : '';
+    return `
+      <li class="place reveal ${p.covers ? 'place--covers' : ''}" style="--i:${i}">
+        <span class="place__icon" aria-hidden="true">${p.icon}</span>
+        <div class="step__body">
+          <p class="step__need">${esc(label)} <span class="chip ${p.covers ? 'chip--ok' : 'chip--done'}">${esc(p.covers ? t.placeCovers : t.placeHelps)}</span></p>
+          <h3 class="step__name">${esc(p.label)} <span class="step__meta">· ${esc(p.buildingLabel)}</span></h3>
+          <p class="step__because">${esc(p.because)}</p>
+          <a class="place__link" href="#/twin?b=${esc(p.placeId)}&s=${esc(s.id)}">${esc(t.seeBuilding)} →</a>
+        </div>
+      </li>`;
   }
 
   function progressPanel(s, conns, t) {

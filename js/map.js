@@ -48,7 +48,7 @@ const CommunityMap = (() => {
   const C = {
     cream: '#F7F1E6', paper: '#FFFDF9', amarillo: '#EFB94B', amarilloSoft: '#FBEFD1',
     terracota: '#C55E3E', terracotaLight: '#E07A5A', terracotaDark: '#A64D30', verde: '#586D53', verdeDark: '#304431',
-    sage: '#9DB58F', tierra: '#A9825E', ink: '#2B221B', ink2: '#5C4F45', ink3: '#8C7D70', line: '#E4D9C8'
+    sage: '#9DB58F', tierra: '#A9825E', ink: '#2B221B', ink2: '#5C4F45', ink3: '#8C7D70', line: '#E4D9C8', verdeSoft: '#E2EADF'
   };
   const TONES = { 1: '#D96F4F', 2: '#5E7A59', 3: '#D9A03A', 4: '#B98D64', 5: '#7F927B' };
   const KIND_COLOR = {
@@ -79,6 +79,7 @@ const CommunityMap = (() => {
   let mode = 'idle';
   let layers = { people: true, resources: true, needs: true, circle: '' };
   let hovered = null, selected = null;
+  let hoveredBuilding = null;
   let pointerState = null; /* arrastre / pinch */
   let listeners = [];
   let timeouts = [];
@@ -210,6 +211,39 @@ const CommunityMap = (() => {
     }));
   }
 
+  /* ---- Edificios: entrar al Community Twin ---- */
+  const ENTERABLE = new Set(['tower', 'hall']);
+  function hitBuilding(x, y) {
+    let best = null, bd = Infinity;
+    buildings.filter(b => ENTERABLE.has(b.kind)).forEach(b => {
+      const p = S(b.offset.x, b.offset.y, heightOf(b) / 2);
+      const r = Math.max(b.w || 10, b.d || 10) * 0.6 * cam.scale + 8;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < r && d < bd) { best = b; bd = d; }
+    });
+    return best;
+  }
+  function placeIcons(b) {
+    return typeof Places !== 'undefined' ? Places.forBuilding(b.id).map(a => a.icon) : [];
+  }
+  function storyQuery() {
+    const s = story && story.situation;
+    return s ? (s.id && s.id !== 'preview' ? `s=${encodeURIComponent(s.id)}` : `q=${encodeURIComponent(s.text)}`) : '';
+  }
+  /* Mapa → Edificio: el mapa se acerca al edificio y el Community Twin lo levanta desde el suelo. */
+  function enterBuilding(b) {
+    if (!b) return;
+    try { sessionStorage.setItem('entre-todos:twin-building', b.id); } catch (err) { /* sin persistencia */ }
+    const p = iso(b.offset.x, b.offset.y, heightOf(b) / 2);
+    cam.tScale = MAX_SCALE; cam.tcx = p.x; cam.tcy = p.y;
+    hovered = null; hoveredBuilding = null; updateTooltip(null);
+    later(() => {
+      ViewHandoff.set({ from: 'map', building: b.id });
+      const q = storyQuery();
+      location.hash = `/twin?b=${encodeURIComponent(b.id)}${q ? '&' + q : ''}`;
+    }, reduced ? 0 : 650);
+  }
+
   /* ---- Cámara ---- */
   function fit(points, pad, immediate) {
     if (!points.length) return;
@@ -249,7 +283,7 @@ const CommunityMap = (() => {
   /* ---- Situación: destacar solo a quienes importan ---- */
   function clearStory() {
     clearTimers();
-    story = null; mode = 'idle'; links = [];
+    story = null; mode = 'idle'; links = []; hoveredBuilding = null;
     marks.forEach(m => { m.actT = 1; m.matched = false; m.maybe = false; m.need = null; m.because = null; });
     setCaption(isWide() ? 'wide' : 'idle');
     setActions('idle');
@@ -302,6 +336,12 @@ const CommunityMap = (() => {
         m.matched = true; m.need = o.title; m.because = o.text;
       });
     }
+    /* Place Capabilities: edificios cuyo lugar también ayuda (recepción, bicicletero, salón, elevador) */
+    st.placeSteps = [];
+    (result.solutions || []).forEach(sol => (sol.placeSteps || []).forEach(p => { if (!st.placeSteps.some(x => x.amenityId === p.amenityId)) st.placeSteps.push(p); }));
+    st.placeSteps = st.placeSteps.slice(0, 4);
+    st.placeBuildings = [];
+    st.placeSteps.forEach(p => { const b = buildingOf(p.placeId); if (b && !st.placeBuildings.some(x => x.b === b)) st.placeBuildings.push({ b, steps: [] }); const pb = st.placeBuildings.find(x => x.b === b); if (pb) pb.steps.push(p); });
     marks.forEach(m => { m.actT = m.matched ? 1 : m.maybe ? 0.72 : (m.kind === 'user' ? 1 : 0.22); });
     story = st;
     setActions('story');
@@ -311,6 +351,7 @@ const CommunityMap = (() => {
     const targets = [];
     st.steps.forEach(s => { if (s.mark && !targets.includes(s.mark)) targets.push(s.mark); });
     st.maybe.forEach(x => { if (!targets.includes(x.mark)) targets.push(x.mark); });
+    st.placeBuildings.forEach(pb => targets.push({ e: pb.b.offset.x, n: pb.b.offset.y, top: heightOf(pb.b) }));
     fitMarks(targets.length ? targets : [me]);
 
     let t = 700;
@@ -322,7 +363,12 @@ const CommunityMap = (() => {
     });
     t += targets.filter(m => m.matched).length * 420 + 300;
     st.maybe.forEach((x, i) => later(() => links.push({ from: me, to: x.mark, born: now(), progress: 0, kind: 'maybe' }), t + i * 160));
-    t += st.maybe.length * 160 + 500;
+    t += st.maybe.length * 160 + 200;
+    st.placeBuildings.forEach((pb, i) => later(() => {
+      pb.born = now();
+      links.push({ from: me, to: { building: pb.b }, born: now(), progress: 0, kind: 'place', label: `${pb.steps[0].icon} ${truncate(pb.steps[0].label, 22)}` });
+    }, t + i * 260));
+    t += st.placeBuildings.length * 260 + 500;
     later(() => { st.done = true; setCaption('coverage', u, st); setSummary(summaryHtml(st)); }, t);
   }
 
@@ -466,6 +512,16 @@ const CommunityMap = (() => {
     const items = solids.map(b => ({ depth: b.offset.x - b.offset.y + (b.d || 10) / 2, draw: () => (b.kind === 'house' ? drawHouse(b) : drawTower(b)) }))
       .concat(trees.map(t => ({ depth: t.e - t.n, draw: () => drawTree(t) })));
     items.sort((a, b) => a.depth - b.depth).forEach(i => i.draw());
+    /* Edificio bajo el cursor o con un lugar que ayuda: contorno de la azotea y halo en la base */
+    const lit = (story ? story.placeBuildings.filter(pb => pb.born).map(pb => pb.b) : []).concat(hoveredBuilding ? [hoveredBuilding] : []);
+    lit.forEach(b => {
+      const base = S(b.offset.x, b.offset.y, 0);
+      drawGlow(base.x, base.y, Math.max(b.w || 10, b.d || 10) * cam.scale * 1.1, hoveredBuilding === b ? C.amarillo : C.sage, 0.5);
+      const roof = footprint(b, heightOf(b));
+      ctx.setLineDash(hoveredBuilding === b ? [] : [4, 4]);
+      poly(roof, null, rgba(hoveredBuilding === b ? C.terracota : C.verde, 0.9), 1.6);
+      ctx.setLineDash([]);
+    });
     /* Etiquetas de lugares: torres, hileras de casas y lugares comunes. Nunca "Casa 14". */
     if (cam.scale >= 0.48) {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -473,6 +529,9 @@ const CommunityMap = (() => {
         /* Al pie del edificio (vértice frontal), lejos del abanico de personas sobre la azotea */
         const p = S(b.offset.x + (b.w || 10) / 2, b.offset.y - (b.d || 10) / 2, 0);
         drawText(b.label, p.x, p.y + 9, { size: mobile ? 10 : 11, color: C.ink2, weight: 600, bg: rgba(C.paper, 0.75) });
+        /* Place Capabilities del edificio, como iconos discretos */
+        const icons = placeIcons(b);
+        if (icons.length && cam.scale >= 0.7) drawText(icons.join(' '), p.x, p.y + 26, { size: mobile ? 10 : 11, color: C.ink, alpha: 0.9, bg: rgba(C.paper, 0.75) });
       });
       clusters.forEach(cl => { const p = S(cl.e, cl.n, 0); drawText(cl.label, p.x, p.y + 8, { size: mobile ? 10 : 11, color: C.ink2, weight: 600, bg: rgba(C.paper, 0.7) }); });
       if (cam.scale >= 0.8) buildings.filter(b => b.kind === 'park' || b.kind === 'court').forEach(b => {
@@ -499,6 +558,7 @@ const CommunityMap = (() => {
 
   /* Posición en pantalla de una marca (con llegada desde la constelación) */
   function markPos(m) {
+    if (m.building && !m.entity) { const b = m.building; return Object.assign(S(b.offset.x, b.offset.y, heightOf(b) + 2), { t: 1 }); }
     const p = S(m.e, m.n, m.top);
     if (m.slots > 1) {
       const r = markRadius(m), spacing = r * 2.3;
@@ -531,8 +591,12 @@ const CommunityMap = (() => {
       for (let i = 0; i <= 24; i++) { const p = quadAt(a, c, b, (i / 24) * prog); if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y); }
       ctx.lineCap = 'round';
       if (l.kind === 'maybe') { ctx.setLineDash([3, 6]); ctx.strokeStyle = rgba(C.tierra, 0.45); ctx.lineWidth = 1; }
+      else if (l.kind === 'place') { ctx.setLineDash([5, 5]); ctx.strokeStyle = rgba(C.verde, 0.7); ctx.lineWidth = 1.6; }
       else { ctx.setLineDash([]); ctx.strokeStyle = rgba(C.terracota, 0.75); ctx.lineWidth = 2; ctx.shadowColor = rgba(C.amarillo, 0.5); ctx.shadowBlur = mobile ? 0 : 6; }
       ctx.stroke(); ctx.shadowBlur = 0; ctx.setLineDash([]);
+      if (l.kind === 'place' && l.progress >= 0.98 && l.label) {
+        drawText(l.label, b.x, b.y - 14, { size: mobile ? 10.5 : 11.5, weight: 600, color: C.verdeDark, bg: rgba(C.verdeSoft, 0.95) });
+      }
       if (l.kind === 'solution') {
         if (!reduced) {
           const gt = l.progress < 1 ? l.progress : ((tNow - l.born) / 2600) % 1;
@@ -734,11 +798,21 @@ const CommunityMap = (() => {
     return out;
   }
 
+  function buildingTooltipHtml(b) {
+    const list = typeof Places !== 'undefined' ? Places.forBuilding(b.id) : [];
+    const here = story ? story.placeSteps.filter(p => p.placeId === b.id) : [];
+    return `<strong>${esc(b.label)}</strong>`
+      + (typeof Places !== 'undefined' ? `<span>${esc(Places.distanceLabel(b) === 'tu edificio' ? 'Tu edificio' : Places.distanceLabel(b))}</span>` : '')
+      + (list.length ? `<span class="cmap__tip-caps">${list.map(a => `${a.icon} ${esc(a.label)}${a.hours ? ` (${esc(a.hours)})` : ''}`).join(' · ')}</span>` : '')
+      + here.map(p => `<em class="cmap__tip-match">${p.icon} ${esc(p.label)}: ${esc(p.covers ? 'lo resuelve el lugar' : 'complementa a las personas')}</em>`).join('')
+      + '<em class="cmap__tip-new">Toca para entrar al edificio</em>';
+  }
+
   function updateTooltip(m, x, y) {
     const tip = root && root.querySelector('.cmap__tip');
     if (!tip) return;
     if (!m) { tip.hidden = true; return; }
-    tip.innerHTML = tooltipHtml(m);
+    tip.innerHTML = m.entity ? tooltipHtml(m) : buildingTooltipHtml(m);
     tip.hidden = false;
     const rect = canvas.getBoundingClientRect();
     const tw = tip.offsetWidth, th = tip.offsetHeight;
@@ -782,8 +856,10 @@ const CommunityMap = (() => {
       }
       if (e.pointerType === 'touch') return;
       hovered = hitTest(p.x, p.y);
-      canvas.style.cursor = hovered ? 'pointer' : 'grab';
-      updateTooltip(hovered || selected, hovered ? p.x : (selected ? markPos(selected).x : 0), hovered ? p.y : (selected ? markPos(selected).y : 0));
+      hoveredBuilding = hovered ? null : hitBuilding(p.x, p.y);
+      canvas.style.cursor = hovered || hoveredBuilding ? 'pointer' : 'grab';
+      const target = hovered || hoveredBuilding || selected;
+      updateTooltip(target, hovered || hoveredBuilding ? p.x : (selected ? markPos(selected).x : 0), hovered || hoveredBuilding ? p.y : (selected ? markPos(selected).y : 0));
     });
     const end = e => {
       const p = local(e);
@@ -792,6 +868,10 @@ const CommunityMap = (() => {
       if (pointers.size === 0) {
         if (wasTap) {
           const m = hitTest(p.x, p.y);
+          if (!m) {
+            const b = hitBuilding(p.x, p.y);
+            if (b) { selected = null; if (hoveredBuilding === b || e.pointerType !== 'touch') { enterBuilding(b); return; } hoveredBuilding = b; updateTooltip(b, p.x, p.y); return; }
+          }
           selected = m === selected ? null : m;
           if (selected) selected.hit = now();
           updateTooltip(selected, p.x, p.y);
@@ -804,7 +884,7 @@ const CommunityMap = (() => {
     };
     on(canvas, 'pointerup', end);
     on(canvas, 'pointercancel', end);
-    on(canvas, 'pointerleave', () => { if (!pointerState) { hovered = null; if (!selected) updateTooltip(null); } });
+    on(canvas, 'pointerleave', () => { if (!pointerState) { hovered = null; hoveredBuilding = null; if (!selected) updateTooltip(null); } });
     on(canvas, 'wheel', e => {
       e.preventDefault();
       const p = local(e);
@@ -847,6 +927,8 @@ const CommunityMap = (() => {
       if (!people.length) return 'Por ahora nadie cerca necesita esto.';
       return `${people.length} ${people.length === 1 ? 'vecino cerca necesita' : 'vecinos cerca necesitan'} justo esto.`;
     }
+    const placeCover = (st.placeSteps || []).find(p => p.covers);
+    if (!people.length && placeCover) return `El lugar mismo puede resolverlo: ${placeCover.label.toLowerCase()} en ${placeCover.buildingLabel}.`;
     if (!people.length) return st.maybe.length ? 'Nadie de tu red todavía, pero hay vecinos cerca con algo parecido.' : 'Todavía nadie cerca puede resolverlo.';
     const maxD = Math.max(...people.map(m => m.entity.distance || 0));
     const where = maxD === 0 ? 'en tu mismo edificio' : `a menos de ${Math.ceil(maxD / 10) * 10} m de ti`;
@@ -858,6 +940,7 @@ const CommunityMap = (() => {
     const parts = [];
     const covered = st.steps.filter(s => s.mark).length, gaps = st.steps.filter(s => s.gap && s.need && s.need.priority !== 'optional').length;
     if (u.kind === 'need' && covered) parts.push(gaps ? `${gaps === 1 ? 'Una cosa' : `${gaps} cosas`} sí tendrías que conseguir.` : 'Sin comprar nada.');
+    if (st.placeSteps && st.placeSteps.length) parts.push(`El lugar también ayuda: ${st.placeSteps.slice(0, 2).map(p => `${p.label.toLowerCase()} en ${p.buildingLabel}`).join(' y ')}.`);
     if (st.maybe.length) parts.push(`Además, ${st.maybe.length} ${st.maybe.length === 1 ? 'vecino que aún no conoces tiene' : 'vecinos que aún no conoces tienen'} algo parecido cerca.`);
     return parts.join(' ');
   }
@@ -868,9 +951,12 @@ const CommunityMap = (() => {
       return `<li><span class="cmap__dot" style="--c:${s.mark.color}"></span><span><strong>${esc(s.mark.name)}</strong> · ${esc(whereLabel(s.mark))}<span class="cmap__because">${esc(what)}${s.because ? ` — ${esc(s.because)}` : ''}</span></span></li>`;
     }).join('');
     const maybe = st.maybe.map(x => `<li class="is-maybe"><span class="cmap__dot cmap__dot--maybe"></span><span><strong>${esc(x.mark.name)}</strong> · ${esc(whereLabel(x.mark))}<span class="cmap__because">Todavía no se han ayudado, pero tiene: ${esc(x.cap.label)}.</span></span></li>`).join('');
-    const gaps = st.steps.filter(s => s.gap && s.need && s.need.priority !== 'optional').map(s => `<li class="is-gap"><span class="cmap__dot cmap__dot--gap"></span><span>${esc(s.need.label)}<span class="cmap__because">Esto sí tendrías que conseguirlo.</span></span></li>`).join('');
-    if (!items && !maybe && !gaps) return '';
-    return `<ul class="cmap__list">${items}${maybe}${gaps}</ul>`;
+    const coveredByPlace = new Set((st.placeSteps || []).filter(p => p.covers).map(p => p.needId));
+    const q = storyQuery();
+    const places = (st.placeSteps || []).map(p => `<li class="is-place"><span class="cmap__dot cmap__dot--place">${p.icon}</span><span><strong>${esc(p.label)}</strong> · ${esc(p.buildingLabel)}<span class="cmap__because">${esc(p.because)}</span><a class="cmap__place-link" href="#/twin?b=${esc(p.placeId)}${q ? '&' + q : ''}">Entrar al edificio →</a></span></li>`).join('');
+    const gaps = st.steps.filter(s => s.gap && s.need && s.need.priority !== 'optional' && !coveredByPlace.has(s.need.id)).map(s => `<li class="is-gap"><span class="cmap__dot cmap__dot--gap"></span><span>${esc(s.need.label)}<span class="cmap__because">Esto sí tendrías que conseguirlo.</span></span></li>`).join('');
+    if (!items && !maybe && !gaps && !places) return '';
+    return `<ul class="cmap__list">${items}${places}${maybe}${gaps}</ul>`;
   }
 
   function setSummary(html) { const el = root && root.querySelector('.cmap__summary'); if (el) el.innerHTML = html; }
@@ -895,19 +981,23 @@ const CommunityMap = (() => {
     return `<label class="cmap__circle"><span class="sr-only">Círculo</span><select name="cmap-circle">${opts.join('')}</select></label>`;
   }
 
-  /* Conmutador Constelación ↔ Mapa (el mismo bloque vive en la constelación). */
+  /* Conmutador de los tres niveles: Mapa (dónde) · Edificio (cómo está organizado) · Constelación (quién con quién).
+     El mismo bloque vive en las tres vistas. */
   function viewSwitch(active, params) {
-    const q = params && params.q ? `?q=${encodeURIComponent(params.q)}` : (params && params.s ? `?s=${encodeURIComponent(params.s)}` : '');
+    const q = params && params.q ? `q=${encodeURIComponent(params.q)}` : (params && params.s ? `s=${encodeURIComponent(params.s)}` : '');
+    const twinB = (typeof CommunityTwin !== 'undefined' && CommunityTwin.lastBuilding()) || (State.user().building || 'central');
+    const opt = (id, href, data, icon, label, small) => `
+        <a class="viewswitch__opt ${active === id ? 'is-active' : ''}" ${active === id ? 'aria-current="page"' : ''} href="${href}" ${data}>
+          ${icon}<span>${label}</span><small>${small}</small>
+        </a>`;
     return `
-      <div class="viewswitch" role="group" aria-label="Cómo ver tu comunidad">
-        <a class="viewswitch__opt ${active === 'constellation' ? 'is-active' : ''}" ${active === 'constellation' ? 'aria-current="page"' : ''} href="#/constellation${q}" data-cmap="to-constellation">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="2.2"/><circle cx="12" cy="6" r="2.2"/><circle cx="19" cy="13" r="2.2"/><path d="M7.8 14.6 10.6 8"/><path d="M13.9 7.4 17.2 11.6"/><path d="M8.2 16.2 16.8 13.6"/></svg>
-          <span>Constelación</span><small>relaciones</small>
-        </a>
-        <a class="viewswitch__opt ${active === 'map' ? 'is-active' : ''}" ${active === 'map' ? 'aria-current="page"' : ''} href="#/map${q}" data-constellation="to-map">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 9 5l6 3 6-3v11l-6 3-6-3-6 3z"/><path d="M9 5v11"/><path d="M15 8v11"/></svg>
-          <span>Mapa</span><small>cercanía</small>
-        </a>
+      <div class="viewswitch viewswitch--3" role="group" aria-label="Cómo ver tu comunidad">
+        ${opt('map', `#/map${q ? '?' + q : ''}`, 'data-constellation="to-map" data-twin="to-map"',
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 9 5l6 3 6-3v11l-6 3-6-3-6 3z"/><path d="M9 5v11"/><path d="M15 8v11"/></svg>', 'Mapa', 'dónde')}
+        ${opt('twin', `#/twin?b=${encodeURIComponent(twinB)}${q ? '&' + q : ''}`, 'data-cmap="to-twin" data-constellation="to-twin"',
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V8l6-4 6 4v13"/><path d="M6 21h12"/><path d="M10 12h1M13 12h1M10 16h1M13 16h1"/></svg>', 'Edificio', 'el lugar')}
+        ${opt('constellation', `#/constellation${q ? '?' + q : ''}`, 'data-cmap="to-constellation" data-twin="to-constellation"',
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="2.2"/><circle cx="12" cy="6" r="2.2"/><circle cx="19" cy="13" r="2.2"/><path d="M7.8 14.6 10.6 8"/><path d="M13.9 7.4 17.2 11.6"/><path d="M8.2 16.2 16.8 13.6"/></svg>', 'Constelación', 'relaciones')}
       </div>`;
   }
 
@@ -919,7 +1009,7 @@ const CommunityMap = (() => {
         <a class="back" href="#/">← Inicio</a>
         <p class="eyebrow">${esc(c.name)} · ${c.members} vecinos</p>
         <h1 id="cmap-title" class="page__title">Mapa de mi comunidad</h1>
-        <p class="page__sub">Las personas, lo que tienen y lo que necesitan existen a unos pasos unas de otras. Cuenta una situación y verás solo a quien puede ayudarte.</p>
+        <p class="page__sub">Las personas, lo que tienen y lo que necesitan existen a unos pasos unas de otras. Cuenta una situación y verás solo a quien puede ayudarte. Toca una torre para entrar al edificio.</p>
         ${viewSwitch('map', params)}
         <form class="cmap__form" data-form="cmap" novalidate>
           <label class="sr-only" for="cmap-input">Cuéntanos tu situación</label>
@@ -962,6 +1052,12 @@ const CommunityMap = (() => {
     if (!el || !root || !root.contains(el)) return;
     const a = el.dataset.cmap;
     e.preventDefault();
+    if (a === 'to-twin') {
+      const b = (typeof CommunityTwin !== 'undefined' && CommunityTwin.lastBuilding()) || State.user().building || 'central';
+      const q = storyQuery();
+      location.hash = `/twin?b=${encodeURIComponent(b)}${q ? '&' + q : ''}`;
+      return;
+    }
     if (a === 'to-constellation') {
       /* Mapa → Constelación: la misma situación (si hay) y las posiciones actuales viajan con el usuario. */
       ViewHandoff.set({ from: 'map', positions: positions() });

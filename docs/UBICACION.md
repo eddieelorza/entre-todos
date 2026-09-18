@@ -10,7 +10,9 @@ se muestra y nunca se pide al cargar la app.
 | --- | --- |
 | `js/location-service.js` | API pura de geolocalización: `getCurrentLocation()`, `getLocationPermission()`, `calculateDistance()`, `formatDistance()`, `distanceTo()`, zona manual, `toStorable()`. No conoce `State` ni `DATA`. |
 | `js/location-seed.js` | Capa geográfica simulada de la comunidad demo: ancla ficticia, `buildings[]` (torres, casas, lugares comunes), `streets[]`, `zones[]`, `households[]` y, por persona, `location { lat, lng, zone, building, approximateDistance }` + `offset`. `person.distance` se deriva de las coordenadas. Se carga después de `communities/*.js`. |
-| `js/map.js` | **Mapa de mi comunidad** (`#/map`): plano isométrico ilustrado en Canvas 2D. Lee `community.buildings/streets/households` y el grafo; usa `Matching.distanceLabelFor` para las etiquetas. Ver README. |
+| `js/map.js` | **Mapa de mi comunidad** (`#/map`): plano isométrico ilustrado en Canvas 2D. Lee `community.buildings/streets/households` y el grafo; usa `Matching.distanceLabelFor` para las etiquetas. Tocar una torre entra al Community Twin. Ver README. |
+| `js/places.js` | **Place Capabilities**: catálogo (recepción, área de paquetes, bicicletero, elevadores, salón…) y `Places.match(need)`; `Places.distanceLabel(building)` devuelve "tu edificio" o "Torre A · 80 m". |
+| `js/twin.js` | **Community Twin** (`#/twin?b=<edificio>`): el edificio en 3D (Three.js bajo demanda). Personas junto a su piso declarado, nunca en un departamento. |
 | `js/matching.js` | `Matching.findMatches(need, options)`: comunidad → tipo de capacidad → etiquetas → disponibilidad (rutinas) → distancia y radio. Devuelve candidatos con `because[]` y `distanceLabel`. |
 | `js/location-ui.js` | `LocationUI.banner({ lang })` y `LocationUI.radiusNote()`. Escucha sus propias acciones (`data-location-action`) y refresca la vista. |
 | `css/location.css` | Estilos del banner. `LocationUI` lo enlaza solo si `index.html` no lo hace. |

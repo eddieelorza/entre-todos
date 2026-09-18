@@ -1,0 +1,179 @@
+/* ==========================================================================
+   twin.css — Community Twin (js/twin.js) + tarjetas de lugar en la situación
+   Misma luz del mapa: un mediodía cálido; al ver a las personas cae la tarde.
+   ========================================================================== */
+
+.viewswitch--3 { grid-template-columns: 1fr 1fr 1fr; }
+.viewswitch--3 .viewswitch__opt { padding: 8px 10px; }
+@media (min-width: 768px) { .viewswitch--3 { max-width: 560px; } }
+
+.twin__where { font-size: 16px; font-weight: 500; color: var(--ink-3); }
+.twin__switch { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+.twin__switch .chip-btn.is-active { border-color: var(--verde); background: var(--verde-soft); color: var(--verde-dark); font-weight: 600; }
+
+.twin__form {
+  display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 16px;
+  padding: 12px 12px 10px; box-shadow: var(--shadow);
+  transition: border-color .15s, box-shadow .15s;
+}
+.twin__form:focus-within { border-color: var(--terracota); box-shadow: 0 0 0 4px var(--terracota-soft); }
+.twin__form textarea { width: 100%; border: 0; background: transparent; resize: none; padding: 0; font-size: 17px; line-height: 1.4; min-height: 48px; }
+.twin__form textarea:focus { outline: none; }
+.twin__form textarea::placeholder { color: var(--ink-3); }
+
+/* ---------- Escenario 3D ---------- */
+.twin__stage {
+  position: relative; height: 62vh; min-height: 420px; max-height: 640px;
+  border-radius: 18px; overflow: hidden;
+  background: linear-gradient(180deg, #EEF0E2, #E2E8D6);
+  box-shadow: 0 12px 40px rgba(43, 34, 27, .14), inset 0 0 0 1px rgba(43, 34, 27, .06);
+  touch-action: none;
+}
+.twin__host { position: absolute; inset: 0; cursor: grab; }
+.twin__host:active { cursor: grabbing; }
+.twin__host canvas { display: block; width: 100% !important; height: 100% !important; }
+.twin__labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.twin__label {
+  position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 9px 4px 6px; border-radius: 999px; white-space: nowrap;
+  background: rgba(255, 253, 249, .9); border: 1px solid var(--line); color: var(--ink);
+  font-size: 12px; font-weight: 600; box-shadow: 0 1px 2px rgba(43, 34, 27, .06);
+  transition: opacity .25s, background-color .25s, border-color .25s, transform .05s linear;
+  will-change: transform;
+}
+.twin__label small { display: block; font-size: 10px; font-weight: 500; color: var(--ink-3); line-height: 1; }
+.twin__label-icon { font-size: 14px; }
+.twin__label.is-dim { opacity: .38; }
+.twin__label.is-hot { background: var(--amarillo-soft); border-color: var(--amarillo); color: #7A5A0E; box-shadow: 0 0 0 4px rgba(239, 185, 75, .25), 0 4px 14px rgba(239, 185, 75, .35); animation: twinPulse 1.8s ease-in-out infinite; }
+.twin__label.is-selected { border-color: var(--terracota); }
+.twin__label[hidden] { display: none; }
+@keyframes twinPulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(239, 185, 75, .25); } 50% { box-shadow: 0 0 0 8px rgba(239, 185, 75, .12); } }
+
+.twin__name {
+  position: absolute; left: 0; top: 0; padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+  background: rgba(255, 253, 249, .8); color: var(--ink); font-size: 11.5px; font-weight: 500;
+  transition: opacity .25s, transform .05s linear;
+}
+.twin__name--me { font-weight: 700; }
+.twin__name.is-dim { opacity: .4; }
+.twin__name.is-hot { font-weight: 700; background: var(--amarillo-soft); color: #7A5A0E; }
+.twin__name.is-people { background: rgba(31, 27, 22, .6); color: var(--cream); }
+.twin__name[hidden] { display: none; }
+
+.twin__tip {
+  position: absolute; left: 0; top: 0; z-index: 3; pointer-events: none;
+  display: grid; gap: 2px; max-width: 260px; padding: 8px 11px; border-radius: 10px;
+  background: rgba(255, 253, 249, .97); color: var(--ink); box-shadow: var(--shadow); border: 1px solid var(--line);
+  font-size: 13px; line-height: 1.3;
+}
+.twin__tip[hidden] { display: none; }
+.twin__tip strong { font-weight: 700; }
+.twin__tip span { color: var(--ink-2); font-size: 12px; }
+.twin__tip em { font-style: normal; color: var(--terracota-dark); font-size: 12px; font-weight: 600; }
+.twin__tip .twin__tip-why { color: var(--ink-2); font-weight: 500; }
+.twin__tip .twin__tip-new { color: var(--ink-3); font-weight: 500; }
+.twin__tip .twin__tip-match { color: var(--verde-dark); }
+.twin__tip .twin__tip-caps { color: var(--ink-3); }
+
+.twin__caption {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 40px 18px 16px; pointer-events: none;
+  background: linear-gradient(to top, rgba(247, 241, 230, .96), rgba(247, 241, 230, 0));
+  color: var(--ink);
+}
+.twin__caption.is-in .twin__title { animation: rise .45s var(--ease) both; }
+.twin__caption.is-in .twin__sub { animation: rise .45s .08s var(--ease) both; }
+.twin__title { font-size: 19px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; max-width: 32ch; color: var(--verde-dark); }
+.twin__sub { margin-top: 4px; font-size: 13.5px; color: var(--ink-2); max-width: 54ch; }
+
+.twin__loading, .twin__fallback {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 2;
+  padding: 10px 16px; border-radius: 12px; background: rgba(255, 253, 249, .92); border: 1px solid var(--line);
+  color: var(--ink-2); font-size: 14px; text-align: center;
+}
+.twin__loading[hidden] { display: none; }
+.twin__loading::before { content: ''; display: block; width: 28px; height: 28px; margin: 0 auto 8px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--terracota); animation: twinSpin 1s linear infinite; }
+@keyframes twinSpin { to { transform: rotate(360deg); } }
+.twin__fallback { display: grid; gap: 6px; max-width: 320px; }
+.twin__fallback strong { color: var(--ink); }
+.twin__fallback-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 4px; }
+
+.twin__tools { position: absolute; top: 10px; right: 10px; z-index: 2; display: grid; gap: 6px; }
+.twin__tool {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line);
+  background: rgba(255, 253, 249, .9); color: var(--ink); font-size: 18px; display: grid; place-items: center;
+  box-shadow: var(--shadow); transition: background-color .15s, transform .12s var(--ease);
+}
+.twin__tool:hover { background: var(--paper); }
+.twin__tool:active { transform: scale(.94); }
+.twin__tool[aria-pressed="true"] { border-color: var(--amarillo); background: var(--amarillo-soft); }
+
+/* ---------- Recorrido: Mapa → Edificio → Personas → Constelación ---------- */
+.twin__levels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 12px 0 0; counter-reset: lvl; }
+.twin__levels li {
+  position: relative; display: grid; padding: 8px 8px 8px 30px; border-radius: 10px; background: var(--cream-2); color: var(--ink-3); counter-increment: lvl;
+}
+.twin__levels li::before { content: counter(lvl); position: absolute; left: 8px; top: 9px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--paper); color: var(--ink-3); }
+.twin__levels li span { font-size: 13px; font-weight: 600; line-height: 1.1; }
+.twin__levels li small { font-size: 10.5px; }
+.twin__levels li.is-active { background: var(--verde-soft); color: var(--verde-dark); }
+.twin__levels li.is-active::before { background: var(--verde); color: #fff; }
+.twin__flow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.twin__actions { margin-top: 12px; }
+.twin__actions:empty { display: none; }
+
+/* ---------- Ficha del edificio ---------- */
+.twin__panel { display: grid; gap: 12px; margin-top: 16px; }
+.twin__col { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.twin__rows { display: grid; gap: 6px; margin-top: 10px; }
+.twin__row {
+  display: grid; grid-template-columns: 32px 1fr; gap: 10px; align-items: start; padding: 8px 10px; border-radius: var(--radius-s);
+  background: var(--cream); border: 1px solid transparent; cursor: pointer; transition: background-color .15s, border-color .15s, opacity .2s;
+}
+.twin__row:hover { border-color: var(--tierra); }
+.twin__row.is-match { background: var(--amarillo-soft); border-color: #E8C979; }
+.twin__row.is-dim { opacity: .55; }
+.twin__row.is-selected { border-color: var(--terracota); }
+.twin__row-icon { width: 32px; height: 32px; display: grid; place-items: center; font-size: 18px; background: var(--paper); border-radius: 8px; }
+.twin__row .avatar--sm { width: 32px; height: 32px; }
+.twin__row-body { display: grid; gap: 1px; font-size: 14px; }
+.twin__row-meta { font-size: 12px; font-weight: 400; color: var(--ink-3); }
+.twin__row-why, .twin__row-sig { font-size: 12.5px; color: var(--ink-2); }
+.twin__row-sig { color: var(--terracota-dark); font-weight: 600; }
+.twin__row-match { font-size: 12.5px; font-weight: 600; color: var(--verde-dark); }
+.twin__row-link { font-size: 13px; font-weight: 600; color: var(--verde-dark); text-decoration: none; margin-top: 2px; }
+.twin__row-link:hover { color: var(--terracota); }
+.twin__foot { margin-top: 16px; }
+
+/* ---------- Tarjetas "El lugar también ayuda" (situación) ---------- */
+.places { display: grid; gap: 10px; }
+.place {
+  display: grid; grid-template-columns: 48px 1fr; gap: 12px; align-items: start;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px;
+}
+.place--covers { border-color: var(--verde-soft); background: #F6F9F3; }
+.place__icon { width: 48px; height: 48px; display: grid; place-items: center; font-size: 24px; background: var(--verde-soft); border-radius: 50%; }
+.place__link { display: inline-block; margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--verde-dark); text-decoration: none; }
+.place__link:hover { color: var(--terracota); }
+.place .step__need .chip { margin-left: 6px; text-transform: none; letter-spacing: 0; }
+
+/* Lugares en las listas del mapa y la constelación */
+.cmap__dot--place, .constellation__dot--place { width: auto; height: auto; background: transparent; box-shadow: none; font-size: 13px; margin-top: 1px; }
+.cmap__list li.is-place { background: #F6F9F3; }
+.constellation__list li.is-place { border-color: var(--verde-soft); }
+.cmap__place-link, .constellation__place-link { display: inline-block; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--verde-dark); text-decoration: none; }
+.cmap__place-link:hover, .constellation__place-link:hover { color: var(--terracota); }
+
+@media (prefers-reduced-motion: reduce) {
+  .twin__label.is-hot { animation: none; }
+  .twin__caption .twin__title, .twin__caption .twin__sub { animation: none; }
+}
+
+@media (min-width: 768px) {
+  .twin__stage { height: 560px; }
+  .twin__title { font-size: 22px; }
+  .twin__caption { padding: 48px 24px 20px; }
+  .twin__panel { grid-template-columns: 1.15fr 1fr; }
+  .twin__levels li { padding: 10px 10px 10px 34px; }
+}

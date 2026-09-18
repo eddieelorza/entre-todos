@@ -120,8 +120,25 @@ Cada comunidad es un modelo estructurado en `js/communities/<id>.js`: personas, 
 - **Círculos de confianza y Trust Graph.** Relaciones persona ↔ persona, círculos explícitos y emergentes, contextos (alguien puede ser de confianza para paquetes y no para entrar a casa) y verificación simulada. Las situaciones sensibles priorizan confianza sobre proximidad. Nada se muestra como número: solo frases ("Ya se han ayudado 4 veces"). Ver [`docs/CIRCULOS-Y-CONFIANZA.md`](docs/CIRCULOS-Y-CONFIANZA.md).
 - **Community Constellation** (`#/constellation`). La comunidad como una constelación viva en Canvas 2D: cada persona es un nodo y, cuando cuentas una situación, la necesidad crea gravedad. "La solución ya estaba ahí. Solo no la veías."
 - **Mapa de mi comunidad** (`#/map`). Mapa ilustrado propio, sin tiles ni lugares reales, con posiciones aproximadas por diseño. Ver [`docs/UBICACION.md`](docs/UBICACION.md).
+- **Community Twin y Place Capabilities** (`#/twin?b=torre-a`). Toca una torre en el mapa y entra al edificio en 3D: lo que el lugar mismo puede hacer (recepción 24 h, área de paquetes, bicicletero, salón común, elevador de carga…) entra al resolver junto a personas y objetos. *The community is not just people. The place itself can help.* Ver la sección siguiente.
 - **Visual Confirm.** Una foto para confirmar que el objeto es el correcto antes de coordinar la entrega. La cámara no reconoce nada; solo conecta a dos personas.
 - **Modo sencillo** (`#/sencillo`). Accesos grandes y voz, pensado para personas mayores. Manda la frase al mismo pipeline.
+
+## Community Twin y Place Capabilities
+
+Tres niveles para ver la misma comunidad, con un conmutador común y un recorrido continuo
+**Mapa → Edificio → Personas → Constelación**:
+
+| Nivel | Vista | Qué responde |
+| --- | --- | --- |
+| 1 | **Mapa** (`#/map`) | Dónde están los edificios |
+| 2 | **Community Twin** (`#/twin?b=torre-a`) | Cómo está organizado físicamente el lugar |
+| 3 | **Constelación** (`#/constellation`) | Cómo están conectadas las personas |
+
+- **Place Capabilities** (`js/places.js`; datos en `community.buildings[].amenities`, `js/location-seed.js`). Cada edificio declara lo que puede hacer por sí mismo. Torre A: recepción 24 h, área de paquetes, bicicletero. Torre B: salón común, estacionamiento, área infantil. Torre Central: lobby, elevadores (uno de carga), roof garden, punto de encuentro. Torre C: gimnasio, área de mascotas. Torre D: bicicletero, estacionamiento. También el salón de usos múltiples, el jardín y la cancha.
+- **El resolver las combina** con personas y objetos: `Resolver.resolve` devuelve `places` por necesidad y cada solución trae `placeSteps`. Un lugar **cubre** lo que ninguna persona cubrió ("necesito espacio para reunirnos" → salón común; escenario nuevo `space`) o **complementa** a la persona ("llega mi paquete" → recepción y área de paquetes junto a Mariana; "se me rompió la bici" → bicicletero junto a la bici de Luis; "bajar algo pesado" → elevador de carga de tu edificio junto a las manos de Jorge). En la situación aparece **"El lugar también ayuda"** y un hueco cubierto por un lugar deja de contarse como compra.
+- **Community Twin** (`js/twin.js`). El mapa se acerca a la torre y el edificio se levanta piso a piso en Three.js (cargado bajo demanda desde jsdelivr; sin conexión, la ficha del edificio muestra la misma información). Pisos apilados, elevadores como núcleo con cabina en movimiento, sótano, azotea y zonas exteriores. Las personas flotan junto a la fachada a la altura de su piso declarado, nunca en un departamento. Arrastrar para orbitar, rueda o pellizco para acercar; tocar una zona o una persona la explica. Con una situación, el edificio destaca sus zonas relevantes ("Recepción y área de paquetes aquí en Torre A"), atenúa el resto, traza conexiones desde ti y lista lo que hay en otras torres.
+- **Recorrido**. "Ver a las personas" vuelve el edificio de cristal, adelanta a quienes viven ahí y cae la tarde; "Ver la constelación" entrega sus posiciones en pantalla (`ViewHandoff`) y cada persona vuela a su lugar en el cielo con la misma situación activa. Misma identidad visual (tono, iniciales, anillo de confianza) en los tres niveles.
 
 ## Principios de diseño
 
@@ -146,8 +163,10 @@ js/verification.js    Verificación simulada y adaptador para un proveedor real
 js/ui.js · views.js   Componentes y pantallas: Inicio · Situación · Mis situaciones · Perfil
 js/app.js             Acciones, autorización multi-persona, aceptación simulada, aprendizaje
 js/constellation.js   Community Constellation (Canvas 2D)
-js/map.js             Mapa ilustrado
-js/location-*.js      Distancias aproximadas desde coordenadas ficticias
+js/map.js             Mapa ilustrado (Canvas 2D isométrico)
+js/twin.js            Community Twin: el edificio en 3D (Three.js bajo demanda)
+js/places.js          Place Capabilities: catálogo y matching de lo que el lugar puede hacer
+js/location-*.js      Distancias aproximadas desde coordenadas ficticias; edificios y hogares simulados
 js/visual-confirm.js  Confirmación con foto
 js/simple-mode.js     Modo sencillo
 docs/                 Replanteamiento, círculos y confianza, ubicación
@@ -167,6 +186,16 @@ Es un MVP de demostración. Las tres comunidades y sus personas son ficticias. N
 - [`docs/REPLANTEAMIENTO.md`](docs/REPLANTEAMIENTO.md): diagnóstico del MVP anterior, propuesta de valor, jobs to be done, flujos, modelo conceptual, qué no construir todavía y la Community Simulation Layer.
 - [`docs/CIRCULOS-Y-CONFIANZA.md`](docs/CIRCULOS-Y-CONFIANZA.md): Trust Graph, círculos, verificación y las reglas de relevancia.
 - [`docs/UBICACION.md`](docs/UBICACION.md): distancias aproximadas y privacidad de ubicación.
+- [`docs/ANALISIS-DEL-SISTEMA.md`](docs/ANALISIS-DEL-SISTEMA.md): pitch de un minuto, análisis del sistema y resultados de las pruebas simuladas.
+- [`docs/portfolio/`](docs/portfolio/README.md): capturas y GIFs del flujo, generados contra el producto real.
+
+## Pruebas simuladas
+
+```bash
+node scripts/test-resolver.mjs      # 17 historias · 54 comprobaciones del pipeline, sin navegador
+node scripts/test-location.mjs      # distancias y permisos de ubicación
+node scripts/test-places.mjs        # Place Capabilities: paquete, espacio para reunirnos, bici, bajar algo pesado
+```
 
 ---
 

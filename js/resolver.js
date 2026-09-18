@@ -258,6 +258,25 @@ const Resolver = (() => {
       }
     },
     {
+      key: 'space',
+      test: t => /\b(espacio|lugar|salon|sala|donde)\b.*\b(reunir|reunirnos|juntarnos|juntar|junta|reunion|taller|clase|evento|festejar|celebrar|ensayar)\b/.test(t)
+        || /\b(reunirnos|juntarnos|junta vecinal|junta de vecinos)\b/.test(t) && !/\b\d{1,2}\b.*\b(comida|cena|carne asada)\b/.test(t),
+      build: (t, u) => {
+        const en = u.lang === 'en';
+        const n = parseInt((t.match(/\b(\d{1,2})\b/) || [])[1], 10) || 0;
+        return Object.assign(u, {
+          icon: '🏛️', scale: n || 1, profile: 'object',
+          title: en ? 'A place to meet' : 'Un espacio para reunirse',
+          summary: en
+            ? `You need a place to get together${n ? ` with about ${n} people` : ''}${u.when.label ? ' ' + u.when.label : ''}. The place itself can help: the residence has common rooms.`
+            : `Necesitas un lugar para reunirte${n ? ` con unas ${n} personas` : ''}${u.when.label ? ' ' + u.when.label : ''}. El lugar mismo puede ayudar: el residencial tiene espacios comunes.`,
+          context: en
+            ? `I need a place to meet${n ? ` with about ${n} people` : ''}${u.when.label ? ' ' + u.when.label : ''}.`
+            : `Necesito un espacio para reunirnos${n ? ` unas ${n} personas` : ''}${u.when.label ? ' ' + u.when.label : ''}.`
+        });
+      }
+    },
+    {
       key: 'gathering',
       test: t => /\b(carne asada|asado|parrillada|bbq|barbecue)\b/.test(t) || (/\b(fiesta|reunion|cumpleanos|cena|comida|posada|dinner|party|cook|cocinar)\b/.test(t) && /\b\d{1,2}\b/.test(t)),
       build: (t, u) => {
@@ -469,6 +488,12 @@ const Resolver = (() => {
         needs.push(need('prep', u.bbq ? 'Manos para preparar salsas y guarniciones' : 'Manos para cocinar y servir', 'Hands to help cook and serve', { kinds: ['skill'], tags: ['cocinar', 'preparar', 'cook'], priority: 'likely', why: `Para ${n} es mucho para una persona`, whyEn: `${n} is a lot for one person`, ask: '¿Me ayudarías un rato a cocinar?', askEn: 'Could you help me cook for a bit?' }));
         return needs;
       }
+      case 'space':
+        return [
+          need('space', 'Un espacio común donde caber todos', 'A common space that fits everyone', { kinds: ['place'], tags: ['salon', 'espacio', 'reunion', 'reunirnos', 'roof'], priority: 'core', why: 'El residencial ya tiene lugares comunes', whyEn: 'The residence already has common spaces', ask: '' }),
+          need('chairs', 'Sillas extra por si faltan', 'Extra chairs just in case', { kinds: ['object'], tags: ['sillas', 'silla', 'chairs'], priority: 'optional', why: 'Casi siempre faltan', whyEn: 'There are never enough', ask: '¿Me prestarías tus sillas plegables?', askEn: 'Could I borrow your folding chairs?' }),
+          need('speaker', 'Una bocina', 'A speaker', { kinds: ['object'], tags: ['bocina', 'speaker'], priority: 'optional', why: 'Opcional', whyEn: 'Optional', ask: '¿Me prestarías tu bocina?', askEn: 'Could I borrow your speaker?' })
+        ];
       case 'bike':
         return [
           need('mechanic', 'Alguien que sepa repararla', 'Someone who can repair it', { kinds: ['skill'], tags: ['reparar-bici'], priority: 'core', strategy: 'repair', why: 'Ponchaduras, cadena, frenos', ask: '¿Podrías echarle un ojo a mi bici hoy?' }),
@@ -648,10 +673,24 @@ const Resolver = (() => {
     return candidates;
   }
 
+  /* ---- Etapa 3b: Place Capabilities ----
+     El lugar también puede ayudar. Por necesidad, candidatos de lugar
+     (recepción 24 h, área de paquetes, bicicletero, salón común, elevador…).
+     `covers`: el lugar resuelve la necesidad por sí mismo; si no, complementa. */
+  function discoverPlaces(needs, u) {
+    const out = {};
+    if (typeof Places === 'undefined') return out;
+    needs.forEach(n => {
+      const list = Places.match(n, { lang: u.lang });
+      out[n.id] = list.filter(c => c.covers || c.helps).slice(0, 3);
+    });
+    return out;
+  }
+
   /* ---- Etapa 4: armar soluciones ---- */
   const PRIORITY = { core: 0, likely: 1, optional: 2 };
 
-  function buildSolutions(needs, candidates, u) {
+  function buildSolutions(needs, candidates, u, places = {}) {
     const groups = {};
     const order = {};
     needs.forEach((n, i) => {
@@ -683,14 +722,32 @@ const Resolver = (() => {
         const step = { needId: n.id, personId: best.personId, capabilityId: best.capabilityId, because: best.because, slotSource: best.slotSource, alternatives, optional };
         if (optional) extras.push(step); else steps.push(step);
       });
+      /* Place Capabilities: un lugar cubre lo que ninguna persona cubrió (salón común, área de
+         paquetes) o complementa a la persona (bicicletero, elevador de carga, punto de encuentro). */
+      const placeSteps = [];
+      const seenAmenity = new Set();
+      groupNeeds.forEach(n => {
+        const best = (places[n.id] || []).find(c => !seenAmenity.has(c.amenityId));
+        if (!best) return;
+        const byPerson = steps.concat(extras).some(st => st.needId === n.id);
+        const covers = !byPerson && best.covers;
+        if (!covers && !(best.covers || best.helps)) return;
+        if (placeSteps.length >= 3 && !covers) return;
+        seenAmenity.add(best.amenityId);
+        const gapIdx = gaps.indexOf(n.id);
+        if (covers && gapIdx >= 0) gaps.splice(gapIdx, 1);
+        placeSteps.push({ needId: n.id, placeId: best.placeId, amenityId: best.amenityId, type: best.type, icon: best.icon, label: best.label,
+          buildingLabel: best.buildingLabel, because: best.because, covers, optional: n.priority === 'optional' });
+      });
       const countable = groupNeeds.filter(n => n.priority !== 'optional');
       const strategy = STRATEGIES[key] || STRATEGIES.main;
+      const placeCovered = placeSteps.filter(p => p.covers && !p.optional).length;
       return {
         key, order: order[key],
         label: u.lang === 'en' ? strategy.labelEn : strategy.label,
         summary: strategy.summary || '',
-        steps, extras, gaps, people, extraPeople,
-        coverage: { covered: steps.length, total: countable.length },
+        steps, extras, gaps, people, extraPeople, placeSteps,
+        coverage: { covered: steps.length + placeCovered, total: countable.length },
         score: steps.reduce((s, st) => s + (candidates[st.needId].find(c => c.capabilityId === st.capabilityId) || { score: 0 }).score, 0)
       };
     });
@@ -703,7 +760,7 @@ const Resolver = (() => {
       const rb = b.coverage.total ? b.coverage.covered / b.coverage.total : 0;
       if (rb !== ra) return rb - ra;
       return a.order - b.order;
-    }).filter(s => s.steps.length || s.extras.length);
+    }).filter(s => s.steps.length || s.extras.length || (s.placeSteps || []).some(p => p.covers));
   }
 
   /* ---- Oportunidades: situaciones abiertas de otros que tu situación resuelve ---- */
@@ -729,8 +786,9 @@ const Resolver = (() => {
     const excluded = new Set(situation.excluded || []);
     const needs = situation.needs.filter(n => !excluded.has(n.id));
     const candidates = discoverCapabilities(graph, needs, u);
-    const solutions = rankSolutions(buildSolutions(needs, candidates, u));
-    return { needs, solutions, opportunities: [] };
+    const places = discoverPlaces(needs, u);
+    const solutions = rankSolutions(buildSolutions(needs, candidates, u, places));
+    return { needs, solutions, opportunities: [], places };
   }
 
   /* El titular del momento "yo no sabía que alguien cerca podía resolver esto". */
@@ -745,6 +803,12 @@ const Resolver = (() => {
     }
     const s = solutions[0];
     const { covered, total } = s.coverage;
+    const placeCover = (s.placeSteps || []).find(p => p.covers && !p.optional);
+    if (!s.people.length && placeCover) {
+      return en
+        ? `The place itself can solve this: ${placeCover.label} in ${placeCover.buildingLabel}.`
+        : `El lugar mismo puede resolverlo: ${placeCover.label.toLowerCase()} en ${placeCover.buildingLabel}.`;
+    }
     if (u.scenario === 'garment' && s.people.length > 1) {
       return covered === total
         ? (en ? 'Your circle can put together the whole look.' : 'Tu círculo puede armarte el look completo.')
@@ -833,7 +897,7 @@ const Resolver = (() => {
   }
 
   return {
-    understandSituation, discoverNeeds, discoverCapabilities, buildSolutions, rankSolutions, discoverOpportunities,
+    understandSituation, discoverNeeds, discoverCapabilities, discoverPlaces, buildSolutions, rankSolutions, discoverOpportunities,
     resolve, headline, buildMessage, helpMessage, communityToday, normalize, DAYS
   };
 })();
