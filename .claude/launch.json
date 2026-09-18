@@ -1,0 +1,44 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "entre-todos",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/serve.mjs"
+      ],
+      "port": 8765,
+      "autoPort": true
+    },
+    {
+      "name": "entre-todos-8766",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--bind",
+        "127.0.0.1"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "entre-todos-node",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/serve.mjs",
+        "8767"
+      ],
+      "port": 8767
+    },
+    {
+      "name": "entre-todos-8768",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/serve.mjs",
+        "8768"
+      ],
+      "port": 8768
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+/* ==========================================================================
+   location.css — Banner de ubicación progresiva (LocationUI).
+   Se enlaza desde index.html o lo inyecta LocationUI si falta.
+   ========================================================================== */
+
+.locbar {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 10px;
+  align-items: start;
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  background: var(--paper, #FFFDF9);
+  border: 1px solid var(--line, #E4D9C8);
+  border-radius: var(--radius, 12px);
+}
+.locbar--on { border-color: var(--verde-soft, #E2EADF); background: var(--verde-soft, #E2EADF); }
+.locbar--off { background: var(--amarillo-soft, #FBEFD1); border-color: var(--amarillo-soft, #FBEFD1); }
+.locbar--compact { margin: 8px 0 12px; padding: 10px 12px; }
+
+.locbar__pin {
+  width: 20px; height: 20px; margin-top: 2px;
+  fill: none; stroke: var(--verde, #586D53); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+.locbar--off .locbar__pin { stroke: #7A5A0E; }
+
+.locbar__text { font-size: 14px; color: var(--ink, #2B221B); }
+.locbar__privacy { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-3, #8C7D70); }
+
+.locbar__controls {
+  grid-column: 2;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  margin-top: 2px;
+}
+.locbar__zone select {
+  padding: 7px 10px;
+  font-size: 14px;
+  color: var(--ink, #2B221B);
+  background: var(--paper, #FFFDF9);
+  border: 1px solid var(--line, #E4D9C8);
+  border-radius: var(--radius-s, 8px);
+}
+.locbar__zone select:focus-visible { outline: 2px solid var(--verde, #586D53); outline-offset: 2px; }
+.locbar__link { font-size: 14px; }
+
+.locnote { margin: -6px 0 14px; }
+.locnote .link-btn { font-size: 13px; }
+
+@media (max-width: 420px) {
+  .locbar__controls { gap: 8px; }
+  .locbar__controls .btn { flex: 1 1 auto; }
+}
