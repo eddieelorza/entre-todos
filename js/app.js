@@ -446,6 +446,7 @@ const App = (() => {
     Router.add(/^\/me$/, () => Views.profile());
     Router.add(/^\/constellation$/, (_, params) => Constellation.mount(document.getElementById('app'), params));
     if (typeof CommunityMap !== 'undefined') Router.add(/^\/map$/, (_, params) => CommunityMap.mount(document.getElementById('app'), params));
+    if (typeof CommunityTwin !== 'undefined') Router.add(/^\/twin$/, (_, params) => CommunityTwin.mount(document.getElementById('app'), params));
     if (typeof SimpleMode !== 'undefined') Router.add(/^\/sencillo$/, () => SimpleMode.mount(document.getElementById('app')));
   }
 

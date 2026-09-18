@@ -6,7 +6,9 @@
 
      community.anchor       punto ficticio de referencia (no es un domicilio real)
      community.buildings[]  torres, casas y lugares comunes con offset en metros,
-                            pisos y huella: lo que dibuja "Mapa de mi comunidad"
+                            pisos, huella y `amenities[]` (Place Capabilities:
+                            recepción, área de paquetes, bicicletero, salón…);
+                            lo que dibujan el mapa y el Community Twin
      community.streets[]    calles del residencial (polilíneas en metros)
      community.zones[]      zonas elegibles como fallback manual (torres y grupos de casas)
      community.households[] hogares simulados que no forman parte del grafo del
@@ -39,11 +41,37 @@
   const JACARANDAS = {
     anchor: { lat: 19.3605, lng: -99.1740 },
     buildings: [
-      { id: 'central', label: 'Torre Central', kind: 'tower', zone: 'central', offset: { x: 0, y: 0 }, floors: 6, w: 34, d: 22 },
-      { id: 'torre-a', label: 'Torre A', kind: 'tower', zone: 'torre-a', offset: { x: -74, y: 44 }, floors: 5, w: 30, d: 20 },
-      { id: 'torre-b', label: 'Torre B', kind: 'tower', zone: 'torre-b', offset: { x: 104, y: 58 }, floors: 5, w: 30, d: 20 },
-      { id: 'torre-c', label: 'Torre C', kind: 'tower', zone: 'torre-c', offset: { x: 150, y: -196 }, floors: 6, w: 32, d: 22 },
-      { id: 'torre-d', label: 'Torre D', kind: 'tower', zone: 'torre-d', offset: { x: -170, y: 62 }, floors: 4, w: 28, d: 20 },
+      { id: 'central', label: 'Torre Central', kind: 'tower', zone: 'central', offset: { x: 0, y: 0 }, floors: 6, w: 34, d: 22,
+        amenities: [
+          { id: 'central-lobby', type: 'lobby', level: 0, why: 'Espacio amplio en la entrada; sirve para esperar a alguien o dejar algo un momento.' },
+          { id: 'central-elevators', type: 'elevators', level: 'all', note: 'Dos elevadores; uno es de carga', why: 'El elevador de carga sube muebles y cajas; la llave se pide en la caseta.' },
+          { id: 'central-roof', type: 'roof', level: 'roof', note: 'Con asador comunitario', why: 'Terraza con asador y mesas para reuniones de hasta 20 personas.' },
+          { id: 'central-meeting', type: 'meeting', level: 'outside', side: 'front', why: 'La entrada de la torre es el punto de encuentro habitual para entregas.' }
+        ] },
+      { id: 'torre-a', label: 'Torre A', kind: 'tower', zone: 'torre-a', offset: { x: -74, y: 44 }, floors: 5, w: 30, d: 20,
+        amenities: [
+          { id: 'a-reception', type: 'reception', level: 0, hours: '24 h', why: 'Hay alguien siempre: reciben paquetes y guardan llaves si nadie está.' },
+          { id: 'a-packages', type: 'packages', level: 0, why: 'Anaqueles cerrados detrás de recepción; el paquete se guarda hasta que pases por él.' },
+          { id: 'a-bikes', type: 'bikes', level: 'outside', side: 'left', why: 'Bicicletero techado con candado; sirve para dejar una bici prestada o la tuya mientras la arreglan.' }
+        ] },
+      { id: 'torre-b', label: 'Torre B', kind: 'tower', zone: 'torre-b', offset: { x: 104, y: 58 }, floors: 5, w: 30, d: 20,
+        amenities: [
+          { id: 'b-hall', type: 'hall', level: 1, note: 'Para 30 personas', why: 'Salón común con mesas y sillas para 30; se aparta con la administración sin costo.' },
+          { id: 'b-parking', type: 'parking', level: -1, note: 'Con lugares de visita', why: 'Lugares de visita junto al acceso: sirve para cargar y descargar sin bloquear la calle.' },
+          { id: 'b-kids', type: 'kids', level: 'outside', side: 'right', why: 'Juegos y sombra; las familias suelen estar ahí por las tardes.' }
+        ] },
+      { id: 'torre-c', label: 'Torre C', kind: 'tower', zone: 'torre-c', offset: { x: 150, y: -196 }, floors: 6, w: 32, d: 22,
+        amenities: [
+          { id: 'c-gym', type: 'gym', level: 1, hours: '6 a 22 h', why: 'Gimnasio pequeño con caminadoras y pesas; abierto a todo el residencial.' },
+          { id: 'c-pets', type: 'pets', level: 'outside', side: 'back', why: 'Área cercada para pasear mascotas sin salir del residencial.' },
+          { id: 'c-elevators', type: 'elevators', level: 'all', why: 'Elevador amplio; cabe un refrigerador de pie.' }
+        ] },
+      { id: 'torre-d', label: 'Torre D', kind: 'tower', zone: 'torre-d', offset: { x: -170, y: 62 }, floors: 4, w: 28, d: 20,
+        amenities: [
+          { id: 'd-bikes', type: 'bikes', level: 'outside', side: 'right', why: 'Bicicletero abierto junto a la entrada.' },
+          { id: 'd-parking', type: 'parking', level: -1, why: 'Estacionamiento con dos lugares de visita.' },
+          { id: 'd-meeting', type: 'meeting', level: 'outside', side: 'front', why: 'Banca junto a la entrada: punto de encuentro de la torre.' }
+        ] },
 
       /* Casas del norte (hilera sobre la calle norte) */
       { id: 'casa-n1', label: 'Casas del norte', kind: 'house', zone: 'casas-norte', offset: { x: -210, y: 190 }, floors: 2, w: 12, d: 10 },
@@ -67,9 +95,19 @@
       { id: 'casa-s8', label: 'Casas del sur', kind: 'house', zone: 'casas-sur', offset: { x: 290, y: -292 }, floors: 2, w: 12, d: 10 },
 
       /* Lugares comunes (no residenciales) */
-      { id: 'jardin', label: 'Jardín central', kind: 'park', offset: { x: 30, y: -60 }, w: 90, d: 60 },
-      { id: 'salon', label: 'Salón de usos múltiples', kind: 'hall', offset: { x: -70, y: -90 }, floors: 1, w: 26, d: 16 },
-      { id: 'cancha', label: 'Cancha', kind: 'court', offset: { x: 200, y: -40 }, w: 40, d: 24 },
+      { id: 'jardin', label: 'Jardín central', kind: 'park', offset: { x: 30, y: -60 }, w: 90, d: 60,
+        amenities: [
+          { id: 'jardin-meeting', type: 'meeting', level: 'outside', side: 'front', why: 'El kiosco del jardín: donde todos saben llegar.' },
+          { id: 'jardin-kids', type: 'kids', level: 'outside', side: 'right', why: 'Juegos infantiles al centro del residencial.' }
+        ] },
+      { id: 'salon', label: 'Salón de usos múltiples', kind: 'hall', offset: { x: -70, y: -90 }, floors: 1, w: 26, d: 16,
+        amenities: [
+          { id: 'salon-hall', type: 'hall', level: 0, note: 'Para 60 personas', why: 'El salón grande del residencial: mesas, sillas, cocina pequeña y bocinas. Se aparta con la administración.' }
+        ] },
+      { id: 'cancha', label: 'Cancha', kind: 'court', offset: { x: 200, y: -40 }, w: 40, d: 24,
+        amenities: [
+          { id: 'cancha-meeting', type: 'meeting', level: 'outside', side: 'front', why: 'Cancha de usos múltiples; sirve para juntar a mucha gente al aire libre.' }
+        ] },
       { id: 'caseta', label: 'Caseta de entrada', kind: 'gate', offset: { x: -290, y: 0 }, floors: 1, w: 8, d: 8 }
     ],
     streets: [

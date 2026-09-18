@@ -1081,8 +1081,13 @@ const Constellation = (() => {
       const what = s.fromUser ? s.need.open.title : s.need.need.label;
       return `<li><span class="constellation__dot" style="--c:${s.person.color}"></span><span class="constellation__body"><strong>${esc(p.name)}</strong> · ${esc(what)}<span class="constellation__because">${esc(s.because)}</span></span></li>`;
     }).join('');
-    const gaps = st.needNodes.filter(n => !n.covered && !n.optional).map(n => `<li class="is-gap"><span class="constellation__dot constellation__dot--gap"></span><span class="constellation__body">${esc(n.need ? n.need.label : n.open.title)}<span class="constellation__because">Esto sí tendrías que conseguirlo.</span></span></li>`).join('');
-    return `<ul class="constellation__list">${items}${gaps}</ul>`;
+    /* Place Capabilities: el lugar también ayuda (Resolver.placeSteps) */
+    const placeSteps = [];
+    (st.result.solutions || []).forEach(sol => (sol.placeSteps || []).forEach(p => { if (!placeSteps.some(x => x.amenityId === p.amenityId)) placeSteps.push(p); }));
+    const covered = new Set(placeSteps.filter(p => p.covers).map(p => p.needId));
+    const places = placeSteps.slice(0, 3).map(p => `<li class="is-place"><span class="constellation__dot constellation__dot--place">${p.icon}</span><span class="constellation__body"><strong>${esc(p.label)}</strong> · ${esc(p.buildingLabel)}<span class="constellation__because">${esc(p.because)}</span><a class="constellation__place-link" href="#/twin?b=${esc(p.placeId)}${st.ephemeral ? `&q=${encodeURIComponent(st.situation.text)}` : `&s=${esc(st.situation.id)}`}">Ver el edificio →</a></span></li>`).join('');
+    const gaps = st.needNodes.filter(n => !n.covered && !n.optional && !(n.need && covered.has(n.need.id))).map(n => `<li class="is-gap"><span class="constellation__dot constellation__dot--gap"></span><span class="constellation__body">${esc(n.need ? n.need.label : n.open.title)}<span class="constellation__because">Esto sí tendrías que conseguirlo.</span></span></li>`).join('');
+    return `<ul class="constellation__list">${items}${places}${gaps}</ul>`;
   }
 
   function setSummary(html) {
@@ -1192,12 +1197,15 @@ const Constellation = (() => {
     if (!el || !root || !root.contains(el) && !document.getElementById('dialog').contains(el)) return;
     e.preventDefault();
     const a = el.dataset.constellation;
-    if (a === 'to-map') {
-      /* Constelación → Mapa: la misma situación (si hay) y las posiciones actuales viajan con el usuario. */
+    if (a === 'to-map' || a === 'to-twin') {
+      /* Constelación → Mapa / Edificio: la misma situación (si hay) y las posiciones actuales viajan con el usuario. */
       if (typeof ViewHandoff !== 'undefined') ViewHandoff.set({ from: 'constellation', positions: positions() });
       const s = story && story.situation;
-      const q = s ? (s.id && s.id !== 'preview' ? `?s=${encodeURIComponent(s.id)}` : `?q=${encodeURIComponent(s.text)}`) : '';
-      location.hash = `/map${q}`;
+      const q = s ? (s.id && s.id !== 'preview' ? `s=${encodeURIComponent(s.id)}` : `q=${encodeURIComponent(s.text)}`) : '';
+      if (a === 'to-twin') {
+        const b = (typeof CommunityTwin !== 'undefined' && CommunityTwin.lastBuilding()) || (State.user().building || 'central');
+        location.hash = `/twin?b=${encodeURIComponent(b)}${q ? '&' + q : ''}`;
+      } else location.hash = `/map${q ? '?' + q : ''}`;
       return;
     }
     if (a === 'try') {
@@ -1259,7 +1267,7 @@ const Constellation = (() => {
     buildNodes();
     /* Mapa → Constelación: cada persona parte de donde estaba sobre el mapa y flota hasta su lugar en el cielo. */
     const handoff = typeof ViewHandoff !== 'undefined' ? ViewHandoff.take() : null;
-    if (handoff && handoff.from === 'map' && handoff.positions) {
+    if (handoff && (handoff.from === 'map' || handoff.from === 'twin') && handoff.positions) {
       nodes.forEach(n => {
         const q = n.type === 'person' && handoff.positions[n.id];
         if (q) { n.x = clamp(q.fx * W, 24, W - 24); n.y = clamp(q.fy * H, 24, H - 62); n.caps.forEach(placeCapAtOrbit); }
