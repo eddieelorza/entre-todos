@@ -22,6 +22,7 @@ const Views = (() => {
       askOne: n => `Preguntarle a ${n}`, askMany: n => `Pedir a estas ${n} personas`,
       asked: n => `Le preguntamos a ${n === 1 ? '1 persona' : `${n} personas`}.`, yes: (y, n) => `${y} de ${n} ya ${y === 1 ? 'dijo' : 'dijeron'} que sí.`,
       allYes: 'Todos dijeron que sí. Ya pueden ponerse de acuerdo en los detalles.', markResolved: 'Marcar como resuelta',
+      confirmHint: 'Antes de coordinar, confirmen con una foto que es justo lo que hace falta. Cualquiera de los dos puede mandarla.',
       resolved: 'Resuelto entre todos.', resolvedWith: n => `Lo resolviste con ${n}.`, noPurchase: 'Sin comprar nada.',
       learned: 'Tu comunidad aprendió algo', mine: 'Mis situaciones', home: 'Volver al inicio',
       none: 'Todavía no encontramos cómo resolverlo con tu comunidad', noneText: 'Puede que la capacidad exista y aún no la conozcamos. Te avisamos en cuanto aparezca.',
@@ -36,6 +37,7 @@ const Views = (() => {
       askOne: n => `Ask ${n}`, askMany: n => `Ask these ${n} people`,
       asked: n => `We asked ${n === 1 ? '1 person' : `${n} people`}.`, yes: (y, n) => `${y} of ${n} already said yes.`,
       allYes: 'Everyone said yes. You can now agree on the details.', markResolved: 'Mark as resolved',
+      confirmHint: 'Before coordinating, confirm with a photo that it is exactly what is needed. Either of you can send one.',
       resolved: 'Solved together.', resolvedWith: n => `You solved it with ${n}.`, noPurchase: 'Without buying anything.',
       learned: 'Your community learned something', mine: 'My situations', home: 'Back home',
       none: "We couldn't find a way with your community yet", noneText: 'The capability may exist and we just don\'t know it yet. We\'ll let you know.',
@@ -206,7 +208,7 @@ const Views = (() => {
       <section class="solution" aria-labelledby="solution-title">
         <h2 id="solution-title" class="wow">${esc(headline)}</h2>
         ${body}
-        <a class="constellation-link" href="#/constellation?s=${esc(s.id)}">${u.lang === 'en' ? 'See how your community organizes around this' : 'Ver cómo tu comunidad se organiza alrededor de esto'}</a>
+        <a class="constellation-link" href="#/constellation?s=${esc(s.id)}">${u.lang === 'en' ? 'See how your community organizes around this' : 'Ver cómo tu comunidad se organiza alrededor de esto'}</a><a class="map-link" href="#/map?s=${esc(s.id)}">${u.lang === 'en' ? 'See it on the map' : 'Verlo en el mapa'}</a>
       </section>
       ${loc}`;
   }
@@ -247,10 +249,13 @@ const Views = (() => {
   function progressPanel(s, conns, t) {
     const yes = conns.filter(c => c.status !== 'asked').length;
     const all = yes === conns.length;
+    const lang = s.understanding.lang;
+    const vc = c => (typeof VisualConfirm !== 'undefined' ? VisualConfirm.block(c, lang) : '');
     return `
       <section class="progress" aria-live="polite">
         <h2 class="wow">${esc(all ? t.allYes : (yes ? t.yes(yes, conns.length) : t.asked(conns.length)))}</h2>
-        <ul class="conns">${conns.map(c => UI.connectionRow(c, s.understanding.lang)).join('')}</ul>
+        ${yes ? `<p class="muted small progress__hint">${esc(t.confirmHint)}</p>` : ''}
+        <ul class="conns">${conns.map(c => UI.connectionRow(c, lang, vc(c))).join('')}</ul>
         ${all ? `<button class="btn btn--primary" type="button" data-action="resolve" data-situation="${esc(s.id)}">${esc(t.markResolved)}</button>` : ''}
       </section>`;
   }
@@ -307,7 +312,7 @@ const Views = (() => {
       let cta;
       if (!conn) cta = `<button class="btn btn--primary btn--sm" type="button" data-action="help" data-situation="${esc(s.id)}" data-open="${esc(o.openId)}" data-person="${esc(p.id)}">Avisar a ${esc(p.name)}</button>`;
       else if (conn.status === 'done') cta = '<span class="chip chip--done">Listo ✓</span>';
-      else cta = `<div class="btn-row btn-row--tight"><span class="chip chip--ok">Le avisamos ✓</span><button class="btn btn--secondary btn--sm" type="button" data-action="helped" data-conn="${esc(conn.id)}">Ya se lo entregué</button></div>`;
+      else cta = `<div class="btn-row btn-row--tight"><span class="chip chip--ok">Le avisamos ✓</span><button class="btn btn--secondary btn--sm" type="button" data-action="helped" data-conn="${esc(conn.id)}">Ya se lo entregué</button></div>${typeof VisualConfirm !== 'undefined' ? VisualConfirm.block(conn, 'es') : ''}`;
       return `
         <li class="step reveal" style="--i:${i}">
           ${UI.avatar(p, 'lg')}

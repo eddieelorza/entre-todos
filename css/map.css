@@ -1,0 +1,148 @@
+/* ==========================================================================
+   map.css — Mapa de mi comunidad (js/map.js) + conmutador Constelación ↔ Mapa
+   Un mediodía cálido: la misma paleta crema/verde de la app, sin azul de mapa.
+   ========================================================================== */
+
+/* ---------- Conmutador de vista (vive en las dos vistas) ---------- */
+.viewswitch {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  margin: 2px 0 14px; padding: 4px; border-radius: 14px;
+  background: var(--cream-2); border: 1px solid var(--line);
+}
+.viewswitch__opt {
+  display: grid; grid-template-columns: 20px auto; grid-template-rows: auto auto; column-gap: 8px; align-items: center;
+  padding: 8px 12px; border-radius: 11px; text-decoration: none; color: var(--ink-2);
+  transition: background-color .2s var(--ease), color .2s, transform .15s var(--ease);
+}
+.viewswitch__opt svg { grid-row: span 2; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.viewswitch__opt span { font-size: 14px; font-weight: 600; line-height: 1.1; }
+.viewswitch__opt small { font-size: 11.5px; color: var(--ink-3); }
+.viewswitch__opt:hover { color: var(--ink); }
+.viewswitch__opt.is-active { background: var(--paper); color: var(--verde-dark); box-shadow: var(--shadow); }
+.viewswitch__opt.is-active small { color: var(--verde); }
+.viewswitch__opt:active { transform: scale(.985); }
+
+/* ---------- Formulario ---------- */
+.cmap__form {
+  display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 16px;
+  padding: 12px 12px 10px; box-shadow: var(--shadow);
+  transition: border-color .15s, box-shadow .15s;
+}
+.cmap__form:focus-within { border-color: var(--terracota); box-shadow: 0 0 0 4px var(--terracota-soft); }
+.cmap__form textarea { width: 100%; border: 0; background: transparent; resize: none; padding: 0; font-size: 17px; line-height: 1.4; min-height: 48px; }
+.cmap__form textarea:focus { outline: none; }
+.cmap__form textarea::placeholder { color: var(--ink-3); }
+
+/* ---------- Escenario ---------- */
+.cmap__stage {
+  position: relative; height: 62vh; min-height: 420px; max-height: 640px;
+  border-radius: 18px; overflow: hidden;
+  background: linear-gradient(180deg, #EEF0E2, #E2E8D6);
+  box-shadow: 0 12px 40px rgba(43, 34, 27, .14), inset 0 0 0 1px rgba(43, 34, 27, .06);
+  touch-action: none;
+}
+.cmap__canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.cmap__canvas:active { cursor: grabbing; }
+/* Llegada desde la constelación: el escenario se aclara (el canvas disuelve el atardecer por dentro) */
+.cmap__stage.is-arriving { animation: mapDawn .9s var(--ease) both; }
+@keyframes mapDawn { from { box-shadow: 0 12px 40px rgba(43, 34, 27, .35), inset 0 0 0 1px rgba(247, 241, 230, .06); } to { box-shadow: 0 12px 40px rgba(43, 34, 27, .14), inset 0 0 0 1px rgba(43, 34, 27, .06); } }
+
+.cmap__caption {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 40px 18px 16px;
+  background: linear-gradient(to top, rgba(247, 241, 230, .96), rgba(247, 241, 230, 0));
+  color: var(--ink); pointer-events: none;
+}
+.cmap__caption.is-in .cmap__title { animation: rise .45s var(--ease) both; }
+.cmap__caption.is-in .cmap__sub { animation: rise .45s .08s var(--ease) both; }
+.cmap__title { font-size: 19px; font-weight: 700; line-height: 1.25; letter-spacing: -0.01em; max-width: 30ch; color: var(--verde-dark); }
+.cmap__sub { margin-top: 4px; font-size: 13.5px; color: var(--ink-2); max-width: 50ch; }
+
+.cmap__tip {
+  position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none;
+  display: grid; gap: 2px; max-width: 240px; padding: 8px 11px; border-radius: 10px;
+  background: rgba(255, 253, 249, .97); color: var(--ink); box-shadow: var(--shadow); border: 1px solid var(--line);
+  font-size: 13px; line-height: 1.3;
+}
+.cmap__tip[hidden] { display: none; }
+.cmap__tip strong { font-weight: 700; }
+.cmap__tip span { color: var(--ink-2); font-size: 12px; }
+.cmap__tip em { font-style: normal; color: var(--terracota-dark); font-size: 12px; font-weight: 600; }
+.cmap__tip .cmap__tip-new { color: var(--ink-3); font-weight: 500; }
+.cmap__tip .cmap__tip-match { color: var(--verde-dark); }
+.cmap__tip .cmap__tip-verified { color: var(--verde); font-size: 11.5px; }
+.cmap__tip .cmap__tip-caps { color: var(--ink-3); }
+.cmap__tip .cmap__tip-need { color: var(--terracota-dark); }
+
+.cmap__tools { position: absolute; top: 10px; right: 10px; display: grid; gap: 6px; }
+.cmap__tool {
+  width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line);
+  background: rgba(255, 253, 249, .9); color: var(--ink); font-size: 19px; font-weight: 600; display: grid; place-items: center;
+  box-shadow: var(--shadow); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  transition: background-color .15s, transform .12s var(--ease);
+}
+.cmap__tool:hover { background: var(--paper); }
+.cmap__tool:active { transform: scale(.94); }
+
+/* ---------- Capas ---------- */
+.cmap__layers { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.cmap__layer {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: var(--radius-pill);
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font-size: 13px; font-weight: 500;
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.cmap__layer[aria-pressed="true"] { border-color: var(--verde); background: var(--verde-soft); color: var(--verde-dark); }
+.cmap__layer[aria-pressed="false"] .cmap__swatch { opacity: .35; }
+.cmap__swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cmap__swatch--people { background: #D96F4F; box-shadow: 0 0 0 2px var(--amarillo-soft); }
+.cmap__swatch--resources { background: linear-gradient(135deg, #EFB94B 50%, #9DB58F 50%); }
+.cmap__swatch--needs { background: transparent; border: 1.5px dashed var(--terracota); }
+.cmap__circle select {
+  padding: 6px 10px; font-size: 13px; color: var(--ink-2); background: var(--paper);
+  border: 1px solid var(--line); border-radius: var(--radius-pill);
+}
+
+/* ---------- Debajo del escenario ---------- */
+.cmap__actions { margin-top: 14px; }
+.cmap__actions:empty { display: none; }
+.cmap__list { display: grid; gap: 8px; margin-top: 16px; }
+.cmap__list li {
+  display: grid; grid-template-columns: 14px 1fr; gap: 10px; align-items: start;
+  padding: 10px 12px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+  font-size: 14px; animation: rise .4s var(--ease) both;
+}
+.cmap__list li.is-gap { border-style: dashed; color: var(--ink-2); }
+.cmap__list li.is-maybe { background: var(--cream); }
+.cmap__dot { width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; background: var(--c, var(--amarillo)); box-shadow: 0 0 0 3px var(--amarillo-soft); }
+.cmap__dot--maybe { background: var(--paper); border: 1.5px solid var(--ink-3); box-shadow: none; }
+.cmap__dot--gap { background: transparent; border: 1.5px dashed var(--ink-3); box-shadow: none; }
+.cmap__because { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-3); }
+.cmap__foot { margin-top: 16px; }
+
+/* Enlace al mapa desde la situación (junto al de la constelación) */
+.map-link {
+  display: inline-flex; align-items: center; gap: 6px; margin: -6px 0 12px 14px;
+  font-size: 14px; font-weight: 600; color: var(--verde-dark); text-decoration: none;
+}
+.map-link:hover { color: var(--terracota); }
+.map-link::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--sage, #9DB58F); box-shadow: 0 0 0 3px var(--verde-soft); }
+
+/* Constelación al llegar desde el mapa: el día se apaga hasta el atardecer */
+.constellation__stage.is-arriving::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, #EEF0E2, #E2E8D6);
+  animation: duskIn .9s var(--ease) both;
+}
+@keyframes duskIn { from { opacity: 1; } to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cmap__caption .cmap__title, .cmap__caption .cmap__sub, .cmap__list li, .cmap__stage.is-arriving, .constellation__stage.is-arriving::before { animation: none; }
+  .constellation__stage.is-arriving::before { opacity: 0; }
+}
+
+@media (min-width: 768px) {
+  .cmap__stage { height: 560px; }
+  .cmap__title { font-size: 22px; }
+  .cmap__caption { padding: 48px 24px 20px; }
+  .viewswitch { max-width: 420px; }
+}

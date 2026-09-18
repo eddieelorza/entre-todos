@@ -10,7 +10,7 @@
 
    Es un módulo aislado. Lee del grafo (State.graph) y del pipeline
    (Resolver.resolve) sin modificarlos; nunca toca State salvo cuando el
-   usuario comparte un objeto desde la cámara (State.learnUserCapability),
+   usuario comparte un objeto (State.learnUserCapability, p. ej. desde una oferta),
    que es exactamente lo mismo que ya hace una oferta resuelta.
 
    Capa de confianza (js/trust.js, js/verification.js), si está cargada:
@@ -1112,6 +1112,7 @@ const Constellation = (() => {
         <p class="eyebrow">${esc(c.name)} · ${c.members} vecinos</p>
         <h1 id="constellation-title" class="page__title">Tu comunidad, vista de otra forma</h1>
         <p class="page__sub">No es un mapa ni un directorio. Es lo que tu comunidad ya sabe hacer, y cómo se acomoda alrededor de lo que necesitas.</p>
+        ${typeof CommunityMap !== 'undefined' ? CommunityMap.viewSwitch('constellation', params) : ''}
         <form class="constellation__form" data-form="constellation" novalidate>
           <label class="sr-only" for="constellation-input">Cuéntanos tu situación</label>
           <textarea id="constellation-input" name="situation" rows="2" placeholder="${esc(c.placeholders[c.placeholders.length > 3 ? 3 : 0])}" autocomplete="off">${esc(params.q || '')}</textarea>
@@ -1126,9 +1127,6 @@ const Constellation = (() => {
             <button class="constellation__tool" type="button" data-constellation="sound" aria-pressed="${soundOn}" title="Sonido">
               <span aria-hidden="true">${soundOn ? '🔔' : '🔕'}</span><span class="sr-only">Sonido</span>
             </button>
-            <button class="constellation__tool" type="button" data-constellation="camera" title="Compartir algo desde tu cámara">
-              <span aria-hidden="true">📷</span><span class="sr-only">Compartir algo desde tu cámara</span>
-            </button>
           </div>
         </div>
         <div class="constellation__actions btn-row"></div>
@@ -1136,140 +1134,6 @@ const Constellation = (() => {
         <p class="muted small constellation__foot">Lo que ves no lo publicó nadie: se aprende de las situaciones que la comunidad resuelve. Nunca se muestra un número de departamento.</p>
       </section>`;
   }
-
-  /* ------------------------------------------------------------------
-     Cámara: el usuario elige un objeto y entra a la constelación
-     ------------------------------------------------------------------ */
-  const Camera = (() => {
-    let stream = null;
-    let frameCanvas = null;
-    let pick = null;
-
-    function stop() {
-      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-    }
-
-    function shell(inner) {
-      return `
-        <div class="dialog__form camera">
-          <h2 id="dialog-title" class="dialog__title">Comparte algo que ya tienes</h2>
-          <p class="dialog__meta">Apunta al objeto, captura y tócalo. Entra a la constelación como algo que tu comunidad sabe de ti.</p>
-          ${inner}
-          <p class="muted small">La foto no se sube a ningún lado: se recorta y se guarda solo en este dispositivo.</p>
-        </div>`;
-    }
-
-    async function open() {
-      pick = null;
-      frameCanvas = null;
-      const dialog = UI.openDialog(shell(`<p class="camera__status">Abriendo la cámara…</p>`));
-      const canUse = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
-      if (!canUse) return fallback(dialog);
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } }, audio: false });
-      } catch (err) {
-        return fallback(dialog);
-      }
-      if (!document.getElementById('dialog').open) return stop();
-      dialog.innerHTML = shell(`
-        <div class="camera__view"><video class="camera__video" autoplay playsinline muted></video></div>
-        <div class="btn-row btn-row--end">
-          <button class="btn btn--ghost" type="button" data-constellation="camera-close">Cancelar</button>
-          <button class="btn btn--primary" type="button" data-constellation="camera-capture" data-autofocus>Capturar</button>
-        </div>`);
-      const video = dialog.querySelector('video');
-      video.srcObject = stream;
-    }
-
-    function fallback(dialog) {
-      dialog.innerHTML = shell(`
-        <p class="camera__status">No pudimos abrir la cámara aquí. Puedes elegir una foto.</p>
-        <label class="btn btn--secondary camera__file">Elegir una foto<input type="file" accept="image/*" capture="environment" data-constellation-file hidden></label>
-        <div class="btn-row btn-row--end"><button class="btn btn--ghost" type="button" data-constellation="camera-close">Cancelar</button></div>`);
-      const input = dialog.querySelector('[data-constellation-file]');
-      input.addEventListener('change', () => {
-        const file = input.files && input.files[0];
-        if (!file) return;
-        const img = new Image();
-        img.onload = () => { URL.revokeObjectURL(img.src); fromImage(img, dialog); };
-        img.src = URL.createObjectURL(file);
-      });
-    }
-
-    function capture() {
-      const dialog = document.getElementById('dialog');
-      const video = dialog.querySelector('video');
-      if (!video || !video.videoWidth) return;
-      fromImage(video, dialog, video.videoWidth, video.videoHeight);
-      stop();
-    }
-
-    function fromImage(source, dialog, w, h) {
-      const sw = w || source.naturalWidth || source.width, sh = h || source.naturalHeight || source.height;
-      const max = 900;
-      const k = Math.min(1, max / Math.max(sw, sh));
-      frameCanvas = document.createElement('canvas');
-      frameCanvas.width = Math.round(sw * k); frameCanvas.height = Math.round(sh * k);
-      frameCanvas.getContext('2d').drawImage(source, 0, 0, frameCanvas.width, frameCanvas.height);
-      dialog.innerHTML = shell(`
-        <div class="camera__view camera__view--pick">
-          <img class="camera__photo" src="${frameCanvas.toDataURL('image/jpeg', 0.85)}" alt="Tu foto">
-          <span class="camera__ring" hidden></span>
-          <p class="camera__hint">Toca el objeto que quieres compartir</p>
-        </div>
-        <label class="camera__label" for="camera-name">¿Qué es?</label>
-        <input id="camera-name" class="camera__name" type="text" maxlength="60" placeholder="p. ej. Escalera de aluminio" autocomplete="off">
-        <div class="btn-row btn-row--end">
-          <button class="btn btn--ghost" type="button" data-constellation="camera-close">Cancelar</button>
-          <button class="btn btn--primary" type="button" data-constellation="camera-confirm" disabled>Compartirlo con mi comunidad</button>
-        </div>`);
-      const view = dialog.querySelector('.camera__view');
-      const ring = dialog.querySelector('.camera__ring');
-      const confirmBtn = dialog.querySelector('[data-constellation="camera-confirm"]');
-      const nameInput = dialog.querySelector('#camera-name');
-      const check = () => { confirmBtn.disabled = !(pick && nameInput.value.trim()); };
-      view.addEventListener('click', e => {
-        const img = view.querySelector('img');
-        const r = img.getBoundingClientRect();
-        const x = clamp((e.clientX - r.left) / r.width, 0, 1), y = clamp((e.clientY - r.top) / r.height, 0, 1);
-        pick = { x, y };
-        ring.hidden = false;
-        ring.style.left = `${x * 100}%`; ring.style.top = `${y * 100}%`;
-        view.querySelector('.camera__hint').textContent = 'Así entrará a la constelación';
-        check();
-        nameInput.focus();
-      });
-      nameInput.addEventListener('input', check);
-    }
-
-    function confirm() {
-      if (!pick || !frameCanvas) return;
-      const dialog = document.getElementById('dialog');
-      const name = (dialog.querySelector('#camera-name').value || '').trim();
-      if (!name) return;
-      const size = Math.min(frameCanvas.width, frameCanvas.height) * 0.34;
-      const out = document.createElement('canvas');
-      out.width = out.height = 128;
-      const sx = clamp(pick.x * frameCanvas.width - size / 2, 0, frameCanvas.width - size);
-      const sy = clamp(pick.y * frameCanvas.height - size / 2, 0, frameCanvas.height - size);
-      out.getContext('2d').drawImage(frameCanvas, sx, sy, size, size, 0, 0, 128, 128);
-      const image = out.toDataURL('image/jpeg', 0.78);
-      const slug = Resolver.normalize(name).replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'objeto';
-      const tags = Resolver.normalize(name).split(' ').filter(w => w.length > 2);
-      const cap = State.learnUserCapability({
-        id: `eddie-cam-${slug}`, kind: 'object', label: name, tags, image,
-        evidence: { count: 1, label: 'Lo compartiste desde tu cámara', learned: true }
-      });
-      UI.closeDialog();
-      stop();
-      addUserCap(cap);
-      UI.toast(`Ahora tu comunidad sabe que tienes: ${name}.`);
-    }
-
-    function close() { stop(); UI.closeDialog(); }
-
-    return { open, capture, confirm, close, stop };
-  })();
 
   /* Un objeto nuevo del usuario entra volando desde abajo hasta su órbita */
   function addUserCap(cap) {
@@ -1316,11 +1180,26 @@ const Constellation = (() => {
     resizeTimer = setTimeout(resize, 120);
   }
 
+  /* Posiciones relativas de cada persona, para que el mapa las reciba y las lleve a su edificio. */
+  function positions() {
+    const out = {};
+    nodes.forEach(n => { if (n.type === 'person') { const p = px(n); out[n.id] = { fx: p.x / W, fy: p.y / H }; } });
+    return out;
+  }
+
   function handleAction(e) {
     const el = e.target.closest('[data-constellation]');
     if (!el || !root || !root.contains(el) && !document.getElementById('dialog').contains(el)) return;
     e.preventDefault();
     const a = el.dataset.constellation;
+    if (a === 'to-map') {
+      /* Constelación → Mapa: la misma situación (si hay) y las posiciones actuales viajan con el usuario. */
+      if (typeof ViewHandoff !== 'undefined') ViewHandoff.set({ from: 'constellation', positions: positions() });
+      const s = story && story.situation;
+      const q = s ? (s.id && s.id !== 'preview' ? `?s=${encodeURIComponent(s.id)}` : `?q=${encodeURIComponent(s.text)}`) : '';
+      location.hash = `/map${q}`;
+      return;
+    }
     if (a === 'try') {
       const input = root.querySelector('#constellation-input');
       if (input) input.value = el.dataset.text;
@@ -1336,14 +1215,6 @@ const Constellation = (() => {
       el.setAttribute('aria-pressed', String(next));
       el.querySelector('span').textContent = next ? '🔔' : '🔕';
       if (next) Sound.note(2);
-    } else if (a === 'camera') {
-      Camera.open();
-    } else if (a === 'camera-capture') {
-      Camera.capture();
-    } else if (a === 'camera-confirm') {
-      Camera.confirm();
-    } else if (a === 'camera-close') {
-      Camera.close();
     }
   }
 
@@ -1386,6 +1257,15 @@ const Constellation = (() => {
     W = H = 0;
     resize();
     buildNodes();
+    /* Mapa → Constelación: cada persona parte de donde estaba sobre el mapa y flota hasta su lugar en el cielo. */
+    const handoff = typeof ViewHandoff !== 'undefined' ? ViewHandoff.take() : null;
+    if (handoff && handoff.from === 'map' && handoff.positions) {
+      nodes.forEach(n => {
+        const q = n.type === 'person' && handoff.positions[n.id];
+        if (q) { n.x = clamp(q.fx * W, 24, W - 24); n.y = clamp(q.fy * H, 24, H - 62); n.caps.forEach(placeCapAtOrbit); }
+      });
+      root.querySelector('.constellation__stage').classList.add('is-arriving');
+    }
     setCaption('idle');
     bindPointer();
     on(window, 'resize', onResize);
@@ -1457,7 +1337,6 @@ const Constellation = (() => {
     cancelAnimationFrame(raf);
     clearTimeout(resizeTimer);
     clearTimers();
-    Camera.stop();
     listeners.forEach(off => off());
     listeners = [];
     if (hashListener) { window.removeEventListener('hashchange', hashListener); hashListener = null; }

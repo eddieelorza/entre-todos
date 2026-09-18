@@ -32,7 +32,8 @@ const LocationService = (() => {
     coords: null,      /* { lat, lng, accuracy, at } */
     zone: null,        /* id de zona elegido manualmente */
     declined: false,   /* el usuario ya dijo que no; no volvemos a insistir */
-    anchor: null       /* ancla para proyectar offsets (demo) */
+    anchor: null,      /* ancla para proyectar offsets (demo) */
+    demoOrigin: null   /* desde dónde medir cuando no hay GPS ni zona (demo: el usuario simulado) */
   };
   const listeners = new Set();
 
@@ -112,12 +113,14 @@ const LocationService = (() => {
     return { lat: anchor.lat + dLat * 180 / Math.PI, lng: anchor.lng + dLng * 180 / Math.PI };
   }
 
-  /* Resuelve la ubicación de cualquier cosa: coords directas, `location` o `offset`. */
+  /* Resuelve la ubicación de cualquier cosa: coords directas, `offset` o `location`.
+     Con ancla, el offset manda: así la comunidad demo se recentra donde esté el
+     usuario cuando comparte su ubicación. Sin ancla (live), vale `location`. */
   function locate(target, anchor = state.anchor) {
     if (!target) return null;
     if (isCoords(target)) return { lat: target.lat, lng: target.lng };
+    if (target.offset && isCoords(anchor)) return project(anchor, target.offset);
     if (isCoords(target.location)) return { lat: target.location.lat, lng: target.location.lng };
-    if (target.offset) return project(anchor, target.offset);
     return null;
   }
 
@@ -240,9 +243,16 @@ const LocationService = (() => {
     emit();
   }
 
-  /* Ancla para proyectar offsets (demo). Ver State.anchorDemoAt(). */
+  /* Ancla para proyectar offsets (demo). */
   function setAnchor(anchor) {
     state.anchor = isCoords(anchor) ? { lat: anchor.lat, lng: anchor.lng } : null;
+  }
+
+  /* Origen de demo: la persona simulada (con `offset`/`location`) desde la que
+     se miden distancias cuando no hay GPS ni zona elegida. Así las distancias
+     salen siempre de coordenadas y nunca de un número escrito a mano. */
+  function setDemoOrigin(target) {
+    state.demoOrigin = target || null;
   }
 
   /* ---- Resolución de distancias ----
@@ -255,8 +265,11 @@ const LocationService = (() => {
     const origin = opts.origin || {};
     const zones = opts.zones || [];
     const anchor = opts.anchor || state.anchor;
-    const originZone = origin.zone !== undefined ? origin.zone : state.zone;
-    const originCoords = origin.coords !== undefined ? origin.coords : state.coords;
+    /* Sin GPS ni zona elegida, el origen es la persona simulada de la demo (su zona y sus coords). */
+    const demo = !state.coords && !state.zone && origin.coords === undefined && origin.zone === undefined ? state.demoOrigin : null;
+    const originZone = origin.zone !== undefined ? origin.zone : (state.zone || (demo && demo.zone) || null);
+    const demoCoords = demo ? locate(demo, anchor) : null;
+    const originCoords = origin.coords !== undefined ? origin.coords : (state.coords || demoCoords);
     const targetZone = target.zone || null;
 
     /* Misma zona declarada: mismo edificio, aunque el GPS diga otra cosa (interiores). */
@@ -331,7 +344,7 @@ const LocationService = (() => {
   return {
     getCurrentLocation, getLocationPermission, calculateDistance, formatDistance,
     distanceTo, nearestZone, project, locate,
-    setZone, getZone, decline, clear, setAnchor, coords, toStorable, snapshot, onChange,
+    setZone, getZone, decline, clear, setAnchor, setDemoOrigin, coords, toStorable, snapshot, onChange,
     SAME_BUILDING_M
   };
 })();

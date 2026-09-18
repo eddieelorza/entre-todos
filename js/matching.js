@@ -53,7 +53,11 @@ const Matching = (() => {
       const c = State.community();
       if (c) return c;
     }
-    return (typeof DATA !== 'undefined' && DATA.community) || {};
+    if (typeof DATA !== 'undefined') {
+      if (typeof DATA.community === 'function') return DATA.community() || {};
+      if (DATA.community) return DATA.community;
+    }
+    return {};
   }
 
   /* Personas del grafo con la evidencia aprendida (State.graph) o la semilla. */
@@ -64,7 +68,10 @@ const Matching = (() => {
     }
     if (typeof State !== 'undefined' && typeof State.people === 'function') return State.people() || [];
     if (typeof State !== 'undefined' && typeof State.residents === 'function') return State.residents() || [];
-    if (typeof DATA !== 'undefined') return DATA.people || DATA.residents || [];
+    if (typeof DATA !== 'undefined') {
+      if (typeof DATA.community === 'function') return (DATA.community() || {}).people || [];
+      return DATA.people || DATA.residents || [];
+    }
     return [];
   }
 
@@ -217,7 +224,8 @@ const Matching = (() => {
     const radius = options.radius === undefined ? defaultRadius : options.radius;
     const limit = options.limit === undefined ? 3 : options.limit;
     const people = options.people || currentPeople();
-    const userId = (typeof State !== 'undefined' && typeof State.user === 'function' && State.user() && State.user().id) || (typeof DATA !== 'undefined' && DATA.user && DATA.user.id) || null;
+    const userId = (typeof State !== 'undefined' && typeof State.user === 'function' && State.user() && State.user().id)
+      || (community.user && community.user.id) || (typeof DATA !== 'undefined' && DATA.user && DATA.user.id) || null;
 
     const results = [];
     people.forEach(person => {

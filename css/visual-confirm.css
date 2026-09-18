@@ -1,0 +1,77 @@
+/* ==========================================================================
+   visual-confirm.css — Visual Confirm: foto para confirmar antes de coordinar
+   ========================================================================== */
+
+/* ---------- Diálogo: origen, cámara, preview ---------- */
+.vc-to { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+.vc-sources { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.vc-source {
+  display: grid; justify-items: center; text-align: center; gap: 4px; padding: 18px 10px 14px;
+  border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--cream); color: var(--ink);
+  font: inherit; cursor: pointer; transition: transform .12s var(--ease), border-color .15s, background-color .15s;
+}
+.vc-source:hover, .vc-source:focus-within { border-color: var(--terracota); background: var(--terracota-soft); }
+.vc-source:active { transform: scale(.98); }
+.vc-source__icon { font-size: 34px; line-height: 1; }
+.vc-source__label { font-weight: 600; font-size: 15px; }
+.vc-source__sub { font-size: 12px; color: var(--ink-3); }
+.vc-status { padding: 16px 0 4px; color: var(--ink-2); }
+.vc-view {
+  position: relative; margin-top: 12px; border-radius: 12px; overflow: hidden; background: #1F1B16;
+  aspect-ratio: 4 / 3; display: grid; place-items: center;
+}
+.vc-view--preview { aspect-ratio: auto; max-height: 52vh; }
+.vc-view__media { width: 100%; height: 100%; max-height: 52vh; object-fit: contain; display: block; }
+.vc-view:not(.vc-view--preview) .vc-view__media { object-fit: cover; }
+.vc-label { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--tierra); }
+.vc-dialog textarea { margin-top: 6px; }
+.vc-privacy { margin-top: 12px; }
+.vc-caption { margin-top: 10px; font-size: 14px; color: var(--ink-2); }
+
+/* ---------- Bloque inline dentro de una conexión ---------- */
+.conn__extra { grid-column: 1 / -1; }
+.vc { display: grid; gap: 10px; padding-top: 10px; margin-top: 4px; border-top: 1px dashed var(--line); }
+.vc--done { font-size: 13px; color: var(--verde-dark); display: flex; gap: 6px; align-items: center; }
+.vc-prompt__text { font-size: 14px; color: var(--ink-2); }
+.vc-prompt .btn-row { margin-top: 8px; }
+.vc-prompt .muted { margin-top: 6px; }
+.btn-row--tight { margin-top: 6px; gap: 6px; }
+
+.vc-photo {
+  display: grid; grid-template-columns: 88px 1fr; gap: 12px; align-items: start;
+  padding: 10px; border-radius: var(--radius); background: var(--cream); border: 1px solid var(--line);
+  animation: rise .35s var(--ease) both;
+}
+.vc-photo--mine { background: var(--verde-soft); border-color: #cfdccb; }
+.vc-photo--rejected { opacity: .7; }
+.vc-photo__thumb {
+  width: 88px; height: 88px; padding: 0; border: 0; border-radius: 10px; overflow: hidden; background: #1F1B16; cursor: zoom-in;
+  box-shadow: var(--shadow);
+}
+.vc-photo__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vc-photo__body { min-width: 0; display: grid; gap: 4px; }
+.vc-photo__caption { font-size: 14px; }
+.vc-photo__status { font-size: 13px; color: var(--ink-2); }
+.vc-photo__status--wait { display: flex; align-items: center; gap: 6px; }
+.vc-photo__status--ok { color: var(--verde-dark); }
+.pulse--sm { width: 8px; height: 8px; }
+
+.vc-review { margin-top: 6px; }
+.vc-review__q { font-size: 14px; font-weight: 600; }
+.vc-review .btn-row { margin-top: 6px; }
+
+/* ---------- Entrega ---------- */
+.vc-delivery { padding: 12px; border-radius: var(--radius-s); background: var(--amarillo-soft); border: 1px solid #EBD49A; }
+.vc-delivery--agreed { background: var(--verde-soft); border-color: #cfdccb; }
+.vc-delivery__title { font-weight: 600; font-size: 14px; }
+.vc-delivery__line { font-size: 14px; margin-top: 2px; }
+.vc-delivery__reply { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.vc-whens { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-photo { animation: none; }
+}
+
+@media (max-width: 380px) {
+  .vc-sources { grid-template-columns: 1fr; }
+}

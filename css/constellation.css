@@ -100,36 +100,10 @@
 .constellation-teaser__sub { font-size: 13px; color: rgba(247, 241, 230, .75); }
 .constellation-teaser__go { font-size: 20px; color: var(--amarillo); }
 
-/* ---------- Cámara ---------- */
-.camera__status { padding: 18px 0; color: var(--ink-2); }
-.camera__view {
-  position: relative; margin-top: 12px; border-radius: 12px; overflow: hidden; background: #1F1B16;
-  aspect-ratio: 4 / 3; display: grid; place-items: center;
-}
-.camera__view--pick { cursor: crosshair; }
-.camera__video, .camera__photo { width: 100%; height: 100%; object-fit: cover; display: block; }
-.camera__ring {
-  position: absolute; width: 84px; height: 84px; border-radius: 50%; transform: translate(-50%, -50%);
-  border: 3px solid var(--amarillo); box-shadow: 0 0 0 999px rgba(31, 27, 22, .45); pointer-events: none;
-  animation: ringIn .3s var(--ease) both;
-}
-.camera__hint {
-  position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; color: var(--cream); font-size: 13px; font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, .6); pointer-events: none;
-}
-.camera__label { display: block; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--tierra); }
-.camera__name {
-  width: 100%; margin-top: 6px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: var(--radius-s);
-  background: var(--paper); font-size: 15px;
-}
-.camera__name:focus { outline: none; border-color: var(--terracota); box-shadow: 0 0 0 4px var(--terracota-soft); }
-.camera__file { margin-top: 12px; cursor: pointer; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
-@keyframes ringIn { from { transform: translate(-50%, -50%) scale(1.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-
 @media (prefers-reduced-motion: reduce) {
-  .constellation__caption .constellation__title, .constellation__caption .constellation__sub, .constellation__list li, .camera__ring { animation: none; }
+  .constellation__caption .constellation__title, .constellation__caption .constellation__sub, .constellation__list li { animation: none; }
 }
 
 @media (min-width: 768px) {

@@ -8,7 +8,9 @@
      version,
      situations[]   Situation { id, text, understanding, needs[], excluded[], strategy, status, createdAt, resolvedAt, seed? }
      connections[]  Connection { id, situationId, personId, capabilityIds[]?, needIds[]?, openId?, kind: request|helping,
-                                 status: asked|accepted|done, message, title, createdAt, updatedAt }
+                                 status: asked|accepted|done, message, title, createdAt, updatedAt,
+                                 photos[]?  Visual Confirm: { id, from: 'me'|personId, image, caption, status: sent|question|accepted|rejected, reply?, question?, createdAt, updatedAt }
+                                 delivery?  { when, place, status: proposed|agreed } }
      learned        { evidence: { capabilityId: n }, userCapabilities: [] }   ← lo que el grafo aprende en la sesión
    }
 
@@ -229,6 +231,28 @@ const State = (() => {
     return c;
   }
 
+  /* ---- Visual Confirm: fotos dentro de una conexión ---- */
+  function addPhoto(connId, photo) {
+    const c = getConnection(connId);
+    if (!c) return null;
+    const now = Date.now();
+    const full = Object.assign({ id: uid('ph'), status: 'sent', createdAt: now, updatedAt: now }, photo);
+    c.photos = (c.photos || []).concat(full);
+    c.updatedAt = now;
+    save();
+    return full;
+  }
+
+  function updatePhoto(connId, photoId, patch) {
+    const c = getConnection(connId);
+    const ph = c && (c.photos || []).find(p => p.id === photoId);
+    if (!ph) return null;
+    Object.assign(ph, patch, { updatedAt: Date.now() });
+    c.updatedAt = Date.now();
+    save();
+    return ph;
+  }
+
   function connectionsFor(situationId) {
     return data.connections.filter(c => c.situationId === situationId);
   }
@@ -276,7 +300,7 @@ const State = (() => {
     graph, person, capability, open, user, learnEvidence, learnUserCapability,
     circleMembers, addToCircle, dismissedSuggestions, dismissSuggestion,
     addSituation, getSituation, updateSituation, situations,
-    addConnection, getConnection, updateConnection, connectionsFor, connectionForOpen, connections,
+    addConnection, getConnection, updateConnection, addPhoto, updatePhoto, connectionsFor, connectionForOpen, connections,
     stats, communityStats
   };
 })();

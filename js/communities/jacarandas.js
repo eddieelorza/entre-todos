@@ -138,7 +138,7 @@ DATA.register({
     },
     {
       id: 'fer', name: 'Fer', initials: 'F', tone: 4,
-      place: 'Torre A', distance: 180, memberSince: 'mayo de 2025', verified: true, completed: 7, allReturned: true,
+      place: 'Torre D', distance: 180, memberSince: 'mayo de 2025', verified: true, completed: 7, allReturned: true,
       verification: { contact: 'verified', identity: 'verified', community: 'verified' },
       routines: [
         { label: 'Va a Costco los sábados por la mañana', days: [6], from: 10, to: 13, source: 'routine', route: 'costco' },
@@ -155,7 +155,7 @@ DATA.register({
     },
     {
       id: 'luis', name: 'Luis', initials: 'L', tone: 2,
-      place: 'Torre C', distance: 300, memberSince: 'septiembre de 2024', verified: true, completed: 6, allReturned: true,
+      place: 'Casas del sur', distance: 300, memberSince: 'septiembre de 2024', verified: true, completed: 6, allReturned: true,
       verification: { contact: 'verified', identity: 'verified', community: 'verified' },
       routines: [{ label: 'Está disponible entre semana', days: [1, 2, 3, 4, 5], from: 10, to: 20, source: 'routine' }],
       capabilities: [
@@ -166,7 +166,7 @@ DATA.register({
     },
     {
       id: 'diego', name: 'Diego', initials: 'D', tone: 3,
-      place: 'Torre B', distance: 200, memberSince: 'julio de 2025', verified: true, completed: 3, allReturned: true,
+      place: 'Casas del norte', distance: 340, memberSince: 'julio de 2025', verified: true, completed: 3, allReturned: true,
       verification: { contact: 'verified', identity: 'verified', community: 'pending' },
       routines: [
         { label: 'Está disponible por las noches entre semana', days: [1, 2, 3, 4, 5], from: 18, to: 22, source: 'routine' },
@@ -211,7 +211,7 @@ DATA.register({
     },
     {
       id: 'rodrigo', name: 'Rodrigo', initials: 'R', tone: 3,
-      place: 'Torre C', distance: 350, memberSince: 'diciembre de 2024', verified: true, completed: 10, allReturned: true,
+      place: 'Casas del sur', distance: 350, memberSince: 'diciembre de 2024', verified: true, completed: 10, allReturned: true,
       verification: { contact: 'verified', identity: 'verified', community: 'verified' },
       routines: [{ label: 'Está disponible por las noches', days: [0, 1, 2, 3, 4, 5, 6], from: 19, to: 23, source: 'routine' }],
       capabilities: [

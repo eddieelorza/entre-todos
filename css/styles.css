@@ -277,6 +277,7 @@ svg { display: block; }
 
 /* Progreso de las conexiones */
 .progress { margin-top: 20px; }
+.progress__hint { margin: -6px 0 12px; }
 .conns { display: grid; gap: 8px; margin-bottom: 14px; }
 .conn {
   display: grid; grid-template-columns: 40px 1fr auto auto; gap: 10px; align-items: center;

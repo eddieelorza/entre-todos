@@ -43,10 +43,13 @@ function makeContext() {
   window.sessionStorage = ctx.sessionStorage;
   vm.createContext(ctx);
   /* Que `const X = …` a nivel de script sea visible como window.X (como en un navegador). */
-  for (const f of ['js/data.js', 'js/location-service.js', 'js/matching.js', 'js/location-seed.js']) {
+  for (const f of ['js/data.js', 'js/communities/jacarandas.js', 'js/location-service.js', 'js/matching.js', 'js/location-seed.js']) {
     const src = readFileSync(resolve(root, f), 'utf8').replace(/^const (\w+) = /m, 'var $1 = window.$1 = ');
     vm.runInContext(src, ctx, { filename: f });
   }
+  /* Atajo: la comunidad demo con semilla geográfica, como la vería State. */
+  ctx.J = ctx.DATA.community('jacarandas');
+  ctx.person = id => (id === ctx.J.user.id ? ctx.J.user : ctx.J.people.find(p => p.id === id));
   return ctx;
 }
 
@@ -76,21 +79,27 @@ test('calculateDistance: haversine ≈ 111 m por 0.001° de latitud', () => {
 });
 
 /* ---- Fallbacks sin ubicación ---- */
-test('distanceTo: sin GPS ni zona usa la distancia declarada de la semilla', () => {
-  const { DATA, Matching } = makeContext();
-  const carlos = DATA.people.find(p => p.id === 'carlos');
-  assert.equal(Matching.distanceFor(carlos), 120);
+test('distanceTo: sin GPS ni zona mide desde el usuario simulado, con coordenadas (no un número escrito)', () => {
+  const { J, LocationService: L, Matching, person } = makeContext();
+  const carlos = person('carlos');
+  const d = Matching.distanceFor(carlos);
+  const byCoords = L.calculateDistance(J.user.location, carlos.location);
+  assert.equal(d, byCoords, 'la distancia es la haversine entre coordenadas');
+  assert.ok(d > 100 && d < 140, `carlos ~120 m, obtuve ${d}`);
+  assert.equal(Matching.distanceLabelFor(carlos), '120 m');
+  assert.equal(Matching.distanceFor(person('mariana')), 0, 'mismo edificio');
+  assert.equal(carlos.distance, byCoords, 'person.distance también sale de coordenadas');
 });
 
 test('distanceTo: con zona manual mide de zona a zona y misma zona = mismo edificio', () => {
-  const { DATA, LocationService: L, Matching } = makeContext();
+  const { LocationService: L, Matching, person } = makeContext();
   L.setZone('torre-b');
-  const carlos = DATA.people.find(p => p.id === 'carlos');
-  const andrea = DATA.people.find(p => p.id === 'andrea');
+  const carlos = person('carlos');
+  const andrea = person('andrea');
   assert.equal(Matching.distanceFor(carlos), 0);
   assert.equal(Matching.distanceLabelFor(carlos), 'mismo edificio');
   const d = Matching.distanceFor(andrea);
-  assert.ok(d > 250 && d < 400, `torre-b → andrea ~316 m, obtuve ${d}`);
+  assert.ok(d > 200 && d < 400, `torre-b → andrea ~260 m, obtuve ${d}`);
   assert.equal(L.snapshot().source, 'zone');
   assert.equal(JSON.parse(L.snapshot().hasCoords), false);
 });
@@ -99,7 +108,7 @@ test('distanceTo: con zona manual mide de zona a zona y misma zona = mismo edifi
 test('getCurrentLocation: concedido → coords en sesión, nunca en localStorage; ancla demo sigue al usuario', async () => {
   geo.mode = 'ok';
   const ctx = makeContext();
-  const { DATA, LocationService: L, Matching } = ctx;
+  const { J, LocationService: L, Matching, person } = ctx;
   assert.equal(geo.calls, 0, 'no debe pedir ubicación al cargar');
   assert.equal(await L.getLocationPermission(), 'prompt');
   const before = geo.calls;
@@ -111,11 +120,11 @@ test('getCurrentLocation: concedido → coords en sesión, nunca en localStorage
   assert.ok(ctx.sessionStorage.getItem('entre-todos:location'), 'coords sí van a sessionStorage');
   /* Demo: reanclamos la comunidad en el usuario y las distancias salen de los offsets. */
   L.setAnchor(coords);
-  const carlos = DATA.people.find(p => p.id === 'carlos');
+  const carlos = person('carlos');
   const d = Matching.distanceFor(carlos);
-  assert.ok(d > 110 && d < 130, `carlos a ~119 m, obtuve ${d}`);
+  assert.ok(d > 100 && d < 140, `carlos a ~120 m, obtuve ${d}`);
   assert.equal(Matching.distanceLabelFor(carlos), '120 m');
-  const z = L.nearestZone(coords, DATA.community.zones);
+  const z = L.nearestZone(coords, J.zones);
   assert.equal(z && z.id, 'central');
   const s = L.toStorable();
   assert.equal(s.lat, 19.4);
@@ -175,11 +184,11 @@ test('findMatches: radio máximo excluye lejanos; sin radio los incluye; kinds f
 });
 
 test('findMatches: solo personas de la misma comunidad y nunca el propio usuario', () => {
-  const { DATA, Matching } = makeContext();
-  const people = DATA.people.concat([{ id: 'x', name: 'X', communityId: 'otra', capabilities: [{ id: 'x-bici', kind: 'object', tags: ['bici'] }], distance: 10 }]);
+  const { J, Matching } = makeContext();
+  const people = J.people.concat([{ id: 'x', name: 'X', communityId: 'otra', capabilities: [{ id: 'x-bici', kind: 'object', tags: ['bici'] }], distance: 10 }]);
   const res = Matching.findMatches({ tags: ['bici'] }, { people, radius: null, limit: null });
   assert.ok(!res.some(r => r.person.id === 'x'));
-  const mine = Matching.findMatches({ tags: ['plantas'] }, { people: people.concat([DATA.user]), radius: null, limit: null });
+  const mine = Matching.findMatches({ tags: ['plantas'] }, { people: people.concat([J.user]), radius: null, limit: null });
   assert.ok(!mine.some(r => r.person.id === 'eddie'));
 });
 
@@ -188,6 +197,52 @@ test('nearestPeople: ordena por cercanía usando el fallback de la semilla', () 
   const list = Matching.nearestPeople();
   assert.equal(list[0].distance, 0);
   for (let i = 1; i < list.length; i += 1) assert.ok(list[i].distance >= list[i - 1].distance);
+});
+
+
+/* ---- Capa geográfica simulada (mapa) ---- */
+test('semilla geográfica: cada persona tiene location {lat,lng,zone,building,approximateDistance} coherente', () => {
+  const { J, LocationService: L, person } = makeContext();
+  const all = [J.user].concat(J.people);
+  all.forEach(p => {
+    assert.ok(p.location && Number.isFinite(p.location.lat) && Number.isFinite(p.location.lng), `${p.id} sin coordenadas`);
+    assert.ok(p.location.zone && p.location.building, `${p.id} sin zona/edificio`);
+    assert.equal(p.location.approximateDistance, p.distance);
+    const d = L.calculateDistance(J.user.location, p.location);
+    if (p.building === J.user.building) assert.equal(p.distance, 0, `${p.id} en el mismo edificio debe estar a 0`);
+    else assert.equal(p.distance, d, `${p.id}: distance debe ser la haversine`);
+    assert.ok(p.distance <= 800, `${p.id} fuera del radio de 800 m (${p.distance})`);
+  });
+  /* Ejemplo conceptual: mismo edificio · Torre B ~120 · Torre A ~80 · Casas del norte ~340 */
+  assert.equal(person('mariana').distance, 0);
+  assert.ok(Math.abs(person('carlos').distance - 120) <= 15, `carlos ${person('carlos').distance}`);
+  assert.ok(Math.abs(person('ana').distance - 85) <= 15, `ana ${person('ana').distance}`);
+  assert.ok(Math.abs(person('diego').distance - 340) <= 20, `diego ${person('diego').distance}`);
+});
+
+test('semilla geográfica: 20–30 hogares en total, hogares extra neutrales y solo en el mapa', () => {
+  const { J } = makeContext();
+  const total = 1 + J.people.length + J.households.length;
+  assert.ok(total >= 24 && total <= 40, `hogares/personas simuladas: ${total}`);
+  assert.ok(J.households.length >= 12);
+  J.households.forEach(h => {
+    assert.ok(h.isNew && h.location && Number.isFinite(h.distance), `${h.id} incompleto`);
+    assert.ok(h.capabilities.length >= 1, `${h.id} sin recursos`);
+    assert.ok(!J.people.some(p => p.id === h.id), 'un hogar no entra al grafo del resolver');
+  });
+  assert.ok(J.buildings.length >= 20 && J.streets.length >= 3);
+  assert.ok(J.zones.every(z => z.offset), 'cada zona tiene un punto para el fallback manual');
+});
+
+test('privacidad: ni coordenadas ni número de departamento en las etiquetas que ven las vistas', () => {
+  const { J, LocationService: L, Matching } = makeContext();
+  const labels = [J.user].concat(J.people, J.households).map(p => `${Matching.distanceLabelFor(p)} ${p.location.buildingLabel}`);
+  labels.forEach(t => {
+    assert.ok(!/\d+\.\d{3,}/.test(t), `parece una coordenada: ${t}`);
+    assert.ok(!/depto|departamento|#\s*\d|casa \d/i.test(t), `identifica un domicilio: ${t}`);
+  });
+  const snap = L.snapshot();
+  assert.ok(!('lat' in snap) && !('coords' in snap), 'snapshot no expone coordenadas');
 });
 
 let failed = 0;

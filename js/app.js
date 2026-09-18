@@ -15,6 +15,7 @@ const App = (() => {
       const conn = State.getConnection(connId);
       if (!conn || conn.status !== 'asked') return;
       State.updateConnection(connId, { status: 'accepted' });
+      if (typeof VisualConfirm !== 'undefined') VisualConfirm.onAccepted(connId);
       const p = State.person(conn.personId);
       const path = Router.current().path;
       if (path.startsWith('/s/') || path.startsWith('/situations') || path === '/') Router.refresh();
@@ -207,7 +208,8 @@ const App = (() => {
 
     'close-dialog'() {
       Session.pendingAsk = null;
-      UI.closeDialog();
+      if (typeof VisualConfirm !== 'undefined') VisualConfirm.close();
+      else UI.closeDialog();
     },
 
     resolve(ds) {
@@ -315,10 +317,12 @@ const App = (() => {
       const c = State.setCommunity(ds.id);
       timers.forEach(t => clearTimeout(t));
       timers.clear();
+      if (typeof VisualConfirm !== 'undefined') VisualConfirm.clearTimers();
       Session.revealed.clear();
       Session.pendingAsk = null;
       UI.closeDialog();
       resumeTimers();
+      if (typeof VisualConfirm !== 'undefined') VisualConfirm.resume();
       Router.go('/');
       Router.refresh();
       UI.toast(`Ahora estás en ${c.name}.`);
@@ -329,6 +333,7 @@ const App = (() => {
       State.reset();
       timers.forEach(t => clearTimeout(t));
       timers.clear();
+      if (typeof VisualConfirm !== 'undefined') VisualConfirm.clearTimers();
       Session.revealed.clear();
       Session.pendingAsk = null;
       Router.go('/');
@@ -392,7 +397,7 @@ const App = (() => {
     document.addEventListener('click', event => {
       const el = event.target.closest('[data-action]');
       if (!el) return;
-      const handler = Actions[el.dataset.action];
+      const handler = Actions[el.dataset.action] || (typeof VisualConfirm !== 'undefined' ? VisualConfirm.actions[el.dataset.action] : null);
       if (!handler) return;
       event.preventDefault();
       handler(el.dataset, el);
@@ -402,7 +407,7 @@ const App = (() => {
       const form = event.target.closest('[data-form]');
       if (!form) return;
       event.preventDefault();
-      const handler = Forms[form.dataset.form];
+      const handler = Forms[form.dataset.form] || (typeof VisualConfirm !== 'undefined' ? VisualConfirm.forms[form.dataset.form] : null);
       if (handler) handler(form);
     });
 
@@ -411,6 +416,11 @@ const App = (() => {
       if (event.key === 'Enter' && !event.shiftKey && event.target.id === 'situation-input') {
         event.preventDefault();
         Forms.situation();
+      }
+      /* En los textareas de Visual Confirm (caption, pregunta) Enter también envía. */
+      if (event.key === 'Enter' && !event.shiftKey && event.target.tagName === 'TEXTAREA' && event.target.closest('[data-form^="vc-"]')) {
+        event.preventDefault();
+        event.target.closest('form').requestSubmit();
       }
     });
 
@@ -435,12 +445,14 @@ const App = (() => {
     Router.add(/^\/situations$/, () => Views.situations());
     Router.add(/^\/me$/, () => Views.profile());
     Router.add(/^\/constellation$/, (_, params) => Constellation.mount(document.getElementById('app'), params));
+    if (typeof CommunityMap !== 'undefined') Router.add(/^\/map$/, (_, params) => CommunityMap.mount(document.getElementById('app'), params));
     if (typeof SimpleMode !== 'undefined') Router.add(/^\/sencillo$/, () => SimpleMode.mount(document.getElementById('app')));
   }
 
   function init() {
     State.load();
     resumeTimers();
+    if (typeof VisualConfirm !== 'undefined') VisualConfirm.resume();
     bindRoutes();
     bindEvents();
     Router.start(document.getElementById('app'));

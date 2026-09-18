@@ -120,7 +120,8 @@ const UI = (() => {
   }
 
   /* ---- Situación: progreso de las conexiones ---- */
-  function connectionRow(conn, lang) {
+  /* extraHtml: contenido a lo ancho bajo la fila (p. ej. Visual Confirm). */
+  function connectionRow(conn, lang, extraHtml = '') {
     const p = State.person(conn.personId);
     return `
       <li class="conn">
@@ -131,6 +132,7 @@ const UI = (() => {
         </div>
         ${conn.status === 'asked' ? '<span class="pulse" aria-hidden="true"></span>' : ''}
         ${statusChip(conn.status, lang)}
+        ${extraHtml ? `<div class="conn__extra">${extraHtml}</div>` : ''}
       </li>`;
   }
 
@@ -145,7 +147,10 @@ const UI = (() => {
     else if (s.status === 'helping') status = '<span class="chip chip--ok">Estás ayudando</span>';
     else if (s.status === 'asked') {
       const yes = conns.filter(c => c.status !== 'asked').length;
-      status = `<span class="chip chip--wait">${yes} de ${conns.length} ${yes === 1 ? 'dijo' : 'dijeron'} que sí</span>`;
+      const review = typeof VisualConfirm !== 'undefined' ? VisualConfirm.pendingReview(s.id) : 0;
+      status = review
+        ? `<span class="chip chip--ok">📷 ${review === 1 ? 'Foto por revisar' : `${review} fotos por revisar`}</span>`
+        : `<span class="chip chip--wait">${yes} de ${conns.length} ${yes === 1 ? 'dijo' : 'dijeron'} que sí</span>`;
     } else if (s.status === 'waiting') status = '<span class="chip chip--wait">Te avisaremos</span>';
     else status = '<span class="chip chip--wait">Sin pedir</span>';
     const helping = u.kind === 'helping' || u.kind === 'opportunity';

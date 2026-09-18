@@ -9,7 +9,8 @@ se muestra y nunca se pide al cargar la app.
 | Archivo | Qué hace |
 | --- | --- |
 | `js/location-service.js` | API pura de geolocalización: `getCurrentLocation()`, `getLocationPermission()`, `calculateDistance()`, `formatDistance()`, `distanceTo()`, zona manual, `toStorable()`. No conoce `State` ni `DATA`. |
-| `js/location-seed.js` | Capa geográfica de la comunidad demo: ancla ficticia, zonas (torres) y offsets en metros por persona. Se carga después de `data.js`. |
+| `js/location-seed.js` | Capa geográfica simulada de la comunidad demo: ancla ficticia, `buildings[]` (torres, casas, lugares comunes), `streets[]`, `zones[]`, `households[]` y, por persona, `location { lat, lng, zone, building, approximateDistance }` + `offset`. `person.distance` se deriva de las coordenadas. Se carga después de `communities/*.js`. |
+| `js/map.js` | **Mapa de mi comunidad** (`#/map`): plano isométrico ilustrado en Canvas 2D. Lee `community.buildings/streets/households` y el grafo; usa `Matching.distanceLabelFor` para las etiquetas. Ver README. |
 | `js/matching.js` | `Matching.findMatches(need, options)`: comunidad → tipo de capacidad → etiquetas → disponibilidad (rutinas) → distancia y radio. Devuelve candidatos con `because[]` y `distanceLabel`. |
 | `js/location-ui.js` | `LocationUI.banner({ lang })` y `LocationUI.radiusNote()`. Escucha sus propias acciones (`data-location-action`) y refresca la vista. |
 | `css/location.css` | Estilos del banner. `LocationUI` lo enlaza solo si `index.html` no lo hace. |
@@ -75,11 +76,21 @@ También acepta el `when` heredado (`{ tags: ['manana', 'tarde'] }`) y las
 
 ## Modo demo
 
-Las personas de la demo tienen `offset` en metros desde un ancla ficticia. Al
-conceder ubicación, el ancla se mueve a donde está la persona
-(`community.anchorFollowsUser`), así "Carlos · 120 m" sigue teniendo sentido en
-cualquier ciudad. En live, `anchorFollowsUser` es `false` y las posiciones
+Cada persona vive en un edificio ficticio (`placement` en `location-seed.js`).
+Su `offset` en metros es el del edificio más unos metros de jitter determinista,
+y sus coordenadas son ese offset proyectado alrededor de un ancla ficticia. La
+distancia entre dos personas es la haversine entre coordenadas; dos personas en
+el mismo edificio están a 0 ("mismo edificio"). Nada se escribe a mano.
+
+Sin GPS ni zona elegida, `LocationService.setDemoOrigin(user)` hace que todo se
+mida desde el usuario simulado. Al conceder ubicación, el ancla se mueve a donde
+está la persona (`community.anchorFollowsUser`) y `locate()` prefiere el offset
+sobre `location`, así "Carlos · 120 m" sigue teniendo sentido en cualquier
+ciudad. En live, `anchorFollowsUser` es `false`, no hay offsets y las posiciones
 vienen de PostGIS.
+
+Los `households[]` son hogares extra (vecinos nuevos con recursos y necesidades)
+que solo existen en el mapa: no entran al grafo del resolver ni al matching.
 
 ## Pendiente para live
 
@@ -87,4 +98,4 @@ vienen de PostGIS.
   `LocationService.toStorable()` cuando la persona conceda permiso.
 - Leer `nearby_profiles(radius)` y pasar `distance_m` a `Matching` como
   `person.distance` (el fallback ya lo respeta).
-- Sin Google Maps ni Mapbox: no hace falta un mapa para mostrar "80 m".
+- Sin Google Maps, Mapbox ni Leaflet: el mapa de la comunidad es una ilustración propia del residencial ficticio; en live seguiría siendo un plano aproximado por edificio, nunca un mapa real con domicilios.
