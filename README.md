@@ -183,10 +183,12 @@ Es un MVP de demostración. Las tres comunidades y sus personas son ficticias. N
 
 ## Documentos
 
+- [`docs/BRIEF-MVP.md`](docs/BRIEF-MVP.md): brief de una página — problema, solución, cómo funciona, evidencia, estado y diferenciación.
 - [`docs/REPLANTEAMIENTO.md`](docs/REPLANTEAMIENTO.md): diagnóstico del MVP anterior, propuesta de valor, jobs to be done, flujos, modelo conceptual, qué no construir todavía y la Community Simulation Layer.
 - [`docs/CIRCULOS-Y-CONFIANZA.md`](docs/CIRCULOS-Y-CONFIANZA.md): Trust Graph, círculos, verificación y las reglas de relevancia.
 - [`docs/UBICACION.md`](docs/UBICACION.md): distancias aproximadas y privacidad de ubicación.
 - [`docs/ANALISIS-DEL-SISTEMA.md`](docs/ANALISIS-DEL-SISTEMA.md): pitch de un minuto, análisis del sistema y resultados de las pruebas simuladas.
+- [`docs/MUNDO-3D.md`](docs/MUNDO-3D.md): el mundo 3D espacial (`js/world/`) — arquitectura, mapa de conceptos, siguientes pasos.
 - [`docs/portfolio/`](docs/portfolio/README.md): capturas y GIFs del flujo, generados contra el producto real.
 
 ## Pruebas simuladas
