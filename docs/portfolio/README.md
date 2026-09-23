@@ -37,6 +37,20 @@ Generadas el 17 de septiembre de 2026 contra el servidor local, sin retoques. M�
 | `17-mapa.png` | Mapa ilustrado de la comunidad |
 | `18-modo-sencillo.png` | Modo sencillo |
 
+## El mundo 3D (`js/world/`, 23 de septiembre de 2026)
+
+Capturado con `scripts/capture-world.mjs` contra Chromium headless (1440×860, 2×). Ver [`../MUNDO-3D.md`](../MUNDO-3D.md) para la arquitectura completa.
+
+| Archivo | Qué muestra |
+| --- | --- |
+| `19-mundo-comunidad.png` | Mi comunidad: el residencial completo, de día, edificios y casas etiquetados |
+| `20-mundo-edificio.png` | Mi edificio (Torre A): fachada en cristal, personas en su piso, capacidades del lugar |
+| `21-mundo-necesidad.png` | "Necesito un vestido…": la necesidad crea gravedad, Paulina/Mariana/Andrea/Valeria convergen, círculo "Amigas" |
+| `22-mundo-visual-confirm.png` | La foto de Paulina emerge junto a su nodo con "¿Te sirve?" |
+| `23-mundo-reveal.gif` | El momento principal: Community Twin → Constellation. Casas → Personas → Relaciones → Confianza → "Tu comunidad tiene más de lo que puedes ver." |
+
 ## Regenerar
 
-Las capturas se hicieron con un script de Playwright (Chromium headless) que recorre el flujo real y codifica los GIFs con `gifenc`. Requiere `npm i playwright gifenc pngjs && npx playwright install chromium` en una carpeta aparte y el servidor local corriendo.
+**MVP clásico:** script de Playwright (Chromium headless) que recorre el flujo real y codifica los GIFs con `gifenc`. Requiere `npm i playwright gifenc pngjs && npx playwright install chromium` en una carpeta aparte y el servidor local corriendo.
+
+**Mundo 3D:** `node scripts/capture-world.mjs` (stills, gif, o sin argumento para ambos) con Playwright ya cacheado (`npx playwright install chromium` si hace falta) y el servidor en `:8769`. El GIF se ensambla con Pillow (`python3 -m pip install --user pillow`) a partir de los cuadros que el script deja en `/tmp/entre-todos-reveal-frames/`.
