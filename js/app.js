@@ -448,6 +448,17 @@ const App = (() => {
     if (typeof CommunityMap !== 'undefined') Router.add(/^\/map$/, (_, params) => CommunityMap.mount(document.getElementById('app'), params));
     if (typeof CommunityTwin !== 'undefined') Router.add(/^\/twin$/, (_, params) => CommunityTwin.mount(document.getElementById('app'), params));
     if (typeof SimpleMode !== 'undefined') Router.add(/^\/sencillo$/, () => SimpleMode.mount(document.getElementById('app')));
+    /* El mundo 3D (js/world/). Las vistas clásicas son su fallback: sin WebGL o sin plano, el usuario cae en el mapa o la constelación. */
+    if (typeof World !== 'undefined') Router.add(/^\/world$/, (_, params) => {
+      const saved = params.s ? State.getSituation(params.s) : null;
+      World.mount(document.getElementById('app'), {
+        embedded: true, route: '/world', state: params.state, building: params.b, q: params.q,
+        situation: saved && saved.understanding && saved.understanding.kind !== 'helping' ? saved : null,
+        classicHref: '#/constellation', profileHref: '#/me',
+        onAsk: text => submitSituation(text),
+        onFallback: () => { location.hash = typeof CommunityMap !== 'undefined' && State.community().buildings ? '#/map' : '#/constellation'; }
+      });
+    });
   }
 
   function init() {
