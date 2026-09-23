@@ -39,6 +39,15 @@
         "8768"
       ],
       "port": 8768
+    },
+    {
+      "name": "entre-todos-world",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/serve.mjs",
+        "8769"
+      ],
+      "port": 8769
     }
   ]
 }

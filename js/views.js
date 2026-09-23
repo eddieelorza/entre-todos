@@ -97,6 +97,15 @@ const Views = (() => {
         <ul class="signals">${signals.map(UI.signalItem).join('')}</ul>
       </section>
 
+      ${typeof World !== 'undefined' && State.community().buildings ? `<a class="constellation-teaser world-teaser" href="#/world">
+        <svg class="constellation-teaser__art" viewBox="0 0 56 44" aria-hidden="true">
+          <path d="M8 38V18l10-5 10 5v20zM30 38V24l8-4 8 4v14z" fill="#F3E8D5" stroke="#A9825E" stroke-width="1.2" stroke-linejoin="round"/>
+          <circle cx="18" cy="8" r="4" fill="#D96F4F"/><circle cx="38" cy="14" r="3.5" fill="#5E7A59"/><path d="M21.5 9.5 35 13" stroke="#EFB94B" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span><span class="constellation-teaser__title">Tu comunidad tiene más de lo que puedes ver.</span><br><span class="constellation-teaser__sub">Explora ${UI.esc(State.community().name)}: entra a tu edificio, quita las paredes y mira cómo se organiza tu gente.</span></span>
+        <span class="constellation-teaser__go" aria-hidden="true">→</span>
+      </a>` : ''}
+
       <a class="constellation-teaser" href="#/constellation">
         <svg class="constellation-teaser__art" viewBox="0 0 56 44" aria-hidden="true">
           <circle cx="10" cy="30" r="4" fill="#D96F4F"/><circle cx="28" cy="10" r="4.5" fill="#EFB94B"/><circle cx="46" cy="24" r="4" fill="#9DB58F"/><circle cx="30" cy="36" r="3" fill="#F7F1E6"/>

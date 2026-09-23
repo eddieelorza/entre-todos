@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Entre Todos · El mundo (prueba aislada)</title>
+  <meta name="theme-color" content="#F7F1E6">
+  <link rel="icon" href="assets/entre-todos-assets/app-icon-96.webp" type="image/webp">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/world.css">
+  <style>html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }</style>
+</head>
+<body>
+  <!-- Prueba aislada del mundo 3D: los mismos datos y módulos del MVP (State, Trust, Places,
+       Resolver), sin router ni vistas. El MVP completo sigue en index.html.
+       ?state=community|building|circles|connections|me|reveal   ·   ?q=<situación> -->
+  <main id="world-host"></main>
+
+  <script src="js/data.js"></script>
+  <script src="js/communities/jacarandas.js"></script>
+  <script src="js/communities/los-pinos.js"></script>
+  <script src="js/communities/gracia.js"></script>
+  <script src="js/location-service.js"></script>
+  <script src="js/matching.js"></script>
+  <script src="js/location-seed.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/verification.js"></script>
+  <script src="js/trust.js"></script>
+  <script src="js/places.js"></script>
+  <script src="js/resolver.js"></script>
+  <script src="js/world/world-data.js"></script>
+  <script src="js/world/world-scene.js"></script>
+  <script src="js/world/world.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      State.load();
+      const q = new URLSearchParams(location.search);
+      World.mount(document.getElementById('world-host'), {
+        state: q.get('state') || 'community', q: q.get('q') || '', building: q.get('b') || '',
+        classicHref: 'index.html#/', profileHref: 'index.html#/me'
+      });
+    });
+  </script>
+</body>
+</html>
